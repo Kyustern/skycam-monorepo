@@ -1,0 +1,2 @@
+[Serial] getSafePosition(yawSteps) * yaw_dir : -7466
+[Serial] getSafePosition(pitchSteps * pitch_dir : 7819

@@ -1,0 +1,22 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      target: production
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - SERIAL_PORT=/dev/ttyUSB0
+      - SERIAL_BAUDRATE=115200
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    restart: unless-stopped
+    networks:
+      - turret-network
+
+networks:
+  turret-network:
+    driver: bridge

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <title>CesiumJS 3D Tiles Rotating Drone View Demo</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/cesiumjs/1.105/Build/Cesium/Cesium.js"></script>
+  <link href="https://ajax.googleapis.com/ajax/libs/cesiumjs/1.105/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+</head>
+<body>
+  <label for="pacViewPlace">Go to a place: </label>
+  <input type="text" id="pacViewPlace" name="pacViewPlace" placeholder="Enter a location..." style="width: 300px" />
+  <div id="cesiumContainer"></div>
+  <script>
+    // Enable simultaneous requests.
+    Cesium.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18;
+
+    // Create the viewer and remove unneeded options.
+    const viewer = new Cesium.Viewer("cesiumContainer", {
+      imageryProvider: false,
+      baseLayerPicker: true,
+      homeButton: false,
+      fullscreenButton: false,
+      navigationHelpButton: true,
+      vrButton: false,
+      sceneModePicker: true,
+      geocoder: true,
+      globe: false,
+      infobox: true,
+      selectionIndicator: true,
+      timeline: false,
+      projectionPicker: true,
+      clockViewModel: null,
+      animation: false,
+      requestRenderMode: true,
+    });
+
+    // Add 3D Tile set.
+    const tileset = viewer.scene.primitives.add(
+      new Cesium.Cesium3DTileset({
+        url: "https://tile.googleapis.com/v1/3dtiles/root.json?key=#KEYPLACEHOLDER#",
+        // This property is required to display attributions.
+        showCreditsOnScreen: true,
+      })
+    );
+
+    // Point the camera at a location and elevation, at a viewport-appropriate distance.
+    function pointCameraAt(location, viewport, elevation) {
+      const distance = Cesium.Cartesian3.distance(
+        Cesium.Cartesian3.fromDegrees(
+          viewport.getSouthWest().lng(), viewport.getSouthWest().lat(), elevation),
+        Cesium.Cartesian3.fromDegrees(
+          viewport.getNorthEast().lng(), viewport.getNorthEast().lat(), elevation)
+      ) / 2;
+      const target = new Cesium.Cartesian3.fromDegrees(location.lng(), location.lat(), elevation);
+      const pitch = -Math.PI / 4;
+      const heading = 0;
+      viewer.camera.lookAt(target, new Cesium.HeadingPitchRange(heading, pitch, distance));
+    }
+
+    // Rotate the camera around a location and elevation, at a viewport-appropriate distance.
+    let unsubscribe = null;
+    function rotateCameraAround(location, viewport, elevation) {
+      if(unsubscribe) unsubscribe();
+      pointCameraAt(location, viewport, elevation);
+      unsubscribe = viewer.clock.onTick.addEventListener(() => {
+        viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z);
+      });
+    }
+
+    function initAutocomplete() {
+      const autocomplete = new google.maps.places.Autocomplete(
+        document.getElementById("pacViewPlace"), {
+          fields: [
+            "geometry",
+            "name",
+          ],
+        }
+      );
+
+      autocomplete.addListener("place_changed", async () => {
+        const place = autocomplete.getPlace();
+
+        if (!(place.geometry && place.geometry.viewport && place.geometry.location)) {
+          window.alert(`Insufficient geometry data for place: ${place.name}`);
+          return;
+        }
+        // Get place elevation using the ElevationService.
+        const elevatorService = new google.maps.ElevationService();
+        const elevationResponse =  await elevatorService.getElevationForLocations({
+          locations: [place.geometry.location],
+        });
+
+        if(!(elevationResponse.results && elevationResponse.results.length)){
+          window.alert(`Insufficient elevation data for place: ${place.name}`);
+          return;
+        }
+        const elevation = elevationResponse.results[0].elevation || 10;
+
+        rotateCameraAround(
+          place.geometry.location,
+          place.geometry.viewport,
+          elevation
+        );
+      });
+    }
+  </script>
+  <script async src="https://maps.googleapis.com/maps/api/js?key=#KEYPLACEHOLDER#&libraries=places&callback=initAutocomplete"></script>
+</body>

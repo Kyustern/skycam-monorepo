@@ -1,0 +1,12 @@
+# Base docker-compose file
+# For development: use docker-compose.dev.yml
+# For production: use docker-compose.prod.yml
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
