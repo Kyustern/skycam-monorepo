@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { Html } from '@react-three/drei'
 import { useStore } from '../store/useStore'
@@ -10,6 +10,7 @@ import { animateCameraFocus } from '@/utilities/cameraUtils'
 export const AirplaneMarker = () => {
   // const [position, setPosition] = useState<THREE.Vector3>(new THREE.Vector3())
   const selectedFlight = useStore(state => state.selectedFlight)
+  const setSelectedFlight = useStore(state => state.setSelectedFlight)
   const flights = useStore(state => state.flights)
   const controls = useStore(state => state.controls)
 
@@ -72,7 +73,7 @@ export const AirplaneMarker = () => {
       return (
         <group position={flightPos} renderOrder={isSelectedFlight ? 1 : 0}>
           {/* Sphere with depth testing disabled */}
-          <mesh renderOrder={isSelectedFlight ? 2 : 0}>
+          <mesh renderOrder={isSelectedFlight ? 2 : 0} onClick={(e) => { e.stopPropagation(); setSelectedFlight(flight); console.log("meshonclick") }}>
             <sphereGeometry args={[kmToSceneUnits(1), 32, 32]} />
             <meshStandardMaterial
               color={isSelectedFlight ? "#38bdf8" : "green"}
@@ -93,26 +94,36 @@ export const AirplaneMarker = () => {
             position={textPos}
             quaternion={q}
             distanceFactor={0.1}
-            style={{
-              color: isSelectedFlight ? "#38bdf8" : "white",
-              fontSize: '14px',
-              fontFamily: 'sans-serif',
-              background: 'rgba(0,0,0,0.5)',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              margin: 0,
-              transform: 'translate(-50%, -50%)',
-              zIndex: isSelectedFlight ? 100 : "inherit",
-              pointerEvents: 'none', // Prevents HTML from blocking interactions
-            }}
+            style={{ pointerEvents: 'none' }}
           >
-            {flight.callsign}
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedFlight(flight);
+              }}
+              style={{
+                color: isSelectedFlight ? "#38bdf8" : "white",
+                fontSize: '14px',
+                fontFamily: 'sans-serif',
+                background: 'rgba(0,0,0,0.5)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                margin: 0,
+                transform: 'translate(-50%, -50%)',
+                zIndex: isSelectedFlight ? 100 : "inherit",
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+              }}
+            >
+              {flight.callsign}
+            </div>
           </Html>
         </group>
       );
     });
-  }, [computeFlightPosVector, flights, selectedFlight?.callsign]);
-  if (!selectedFlight) return null
+  }, [computeFlightPosVector, flights, selectedFlight?.callsign, setSelectedFlight]);
+  
+  if (!flights) return null
 
   return (markers)
 }

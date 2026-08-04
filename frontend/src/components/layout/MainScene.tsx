@@ -54,13 +54,16 @@ const GradientBackground = ({ darknessMultiplier }: { darknessMultiplier: number
     return <primitive attach="background" object={texture} />
 }
 
-export const MainScene = () => {
+type MainSceneProps = {
+    controlsRef: React.RefObject<OrbitControlsImpl | null>
+}
+
+export const MainScene = ({ controlsRef }: MainSceneProps) => {
     const observerPosition = useStore(state => state.observerPosition)
     const selectedFlight = useStore(state => state.selectedFlight)
     const mode = useStore(state => state.selectionMode)
     const darkness = useStore(state => state.darkness)
     const setControls = useStore(state => state.setControls)
-    const controlsRef = useRef<OrbitControlsImpl>(null)
 
     useEffect(() => {
         if (controlsRef.current) {
@@ -73,32 +76,26 @@ export const MainScene = () => {
     //     setObserverPosition({ latitude: 43.6047, longitude: 1.4442, baro_altitude: 150 })
     // }, [setObserverPosition])
 
-    // Auto-focus camera based on observer position or selected flight
+    // Auto-focus camera based on selected flight only (not observer position)
     useEffect(() => {
         if (controlsRef.current) {
-            const timer = setTimeout(() => {
-                if (mode === 'airplane' && selectedFlight) {
-                    console.log("mode === 'airplane' && selectedFlight", mode === 'airplane' && selectedFlight);
+            // const timer = setTimeout(() => {
+            //     if (mode === 'airplane' && selectedFlight) {
+            //         console.log("mode === 'airplane' && selectedFlight", mode === 'airplane' && selectedFlight);
+            //         console.log("asassas")
+            //         // Focus on selected flight with smooth animation
+            //         animateCameraFocus(
+            //             controlsRef.current,
+            //             focusCameraOnGPS(controlsRef.current, selectedFlight.latitude, selectedFlight.longitude, observerPosition?.baro_altitude || 0)
+            //         )
+            //     } else if (!observerPosition && !selectedFlight) {
+            //         console.log("default")
 
-                    // Focus on selected flight with smooth animation
-                    animateCameraFocus(
-                        controlsRef.current,
-                        focusCameraOnGPS(controlsRef.current, selectedFlight.latitude, selectedFlight.longitude, observerPosition.baro_altitude)
-                    )
-                } else if (observerPosition) {
-                    console.log("observerPosition", observerPosition);
-                    animateCameraFocus(
-                        controlsRef.current,
-                        focusCameraOnGPS(controlsRef.current, observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude)
-                    )
-                } else {
-                    console.log("default")
-
-                    // Default focus on Earth center
-                    animateCameraFocus(controlsRef.current, new THREE.Vector3(0, 0, 0))
-                }
-            }, 500)
-            return () => clearTimeout(timer)
+            //         // Default focus on Earth center
+            //         animateCameraFocus(controlsRef.current, new THREE.Vector3(0, 0, 0))
+            //     }
+            // }, 500)
+            // return () => clearTimeout(timer)
         }
     }, [controlsRef, observerPosition, selectedFlight, mode])
 

@@ -10,9 +10,14 @@ const SEGMENTS = 48
 export const AzimuthAngleOverlay = () => {
   const observerPosition = useStore(state => state.observerPosition)
   const selectedFlight = useStore(state => state.selectedFlight)
-
+  // const flightsHash = useStore(state => state.flightsHash)
+  const flights = useStore(state => state.flights)
+  
   const overlay = useMemo(() => {
+    // console.log('LTES - flightsHash', flightsHash);
     if (!observerPosition || !selectedFlight) return null
+    const currentSelectedFlight = flights[selectedFlight.callsign.trim().toLocaleUpperCase()]
+    if (!currentSelectedFlight) return null
 
     const observerPoint = gpsToScenePosition(
       observerPosition.latitude,
@@ -20,9 +25,9 @@ export const AzimuthAngleOverlay = () => {
       observerPosition.baro_altitude
     )
     const flightPoint = gpsToScenePosition(
-      selectedFlight.latitude,
-      selectedFlight.longitude,
-      selectedFlight.baro_altitude
+      currentSelectedFlight.latitude,
+      currentSelectedFlight.longitude,
+      currentSelectedFlight.baro_altitude
     )
 
     const up = observerPoint.clone().normalize()
@@ -117,7 +122,7 @@ export const AzimuthAngleOverlay = () => {
       verticalSectorGeometry,
       actualFlightRayGeometry,
     }
-  }, [observerPosition, selectedFlight])
+  }, [observerPosition, selectedFlight, flights])
 
   if (!overlay) return null
 
@@ -129,9 +134,6 @@ export const AzimuthAngleOverlay = () => {
       <mesh geometry={overlay.verticalSectorGeometry}>
         <meshBasicMaterial color="#38bdf8" transparent opacity={0.3} side={THREE.DoubleSide} />
       </mesh>
-      <line geometry={overlay.actualFlightRayGeometry}>
-        <lineBasicMaterial color="#ef4444" transparent opacity={0.9} />
-      </line>
     </group>
   )
 }

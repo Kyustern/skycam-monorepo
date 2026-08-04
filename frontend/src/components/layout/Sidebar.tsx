@@ -1,18 +1,35 @@
 import { useState, useEffect } from 'react'
+import React from 'react'
 import { useStore } from '../../store/useStore'
-import { FlightSidebar } from './FlightSidebar'
+import { ObserverPositionForm } from './ObserverPositionForm'
+import type { FlightState } from '../../scripts/scrap-airplane'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
+import { focusCameraOnGPS, animateCameraFocus } from '../../utilities/cameraUtils'
 
-export const Sidebar = () => {
+type SidebarProps = {
+  controlsRef?: React.RefObject<OrbitControlsImpl | null>
+}
+
+export const Sidebar = ({ controlsRef }: SidebarProps) => {
   const observerPosition = useStore(state => state.observerPosition)
-  const [latitude, setLatitude] = useState(observerPosition.latitude)
-  const [longitude, setLongitude] = useState(observerPosition.longitude)
-  const [baroalt, setBaroalt] = useState(observerPosition.baro_altitude)
   const [darkTheme, setDarkTheme] = useState(false)
   const darkness = useStore(state => state.darkness)
   const setDarkness = useStore(state => state.setDarkness)
-  const setObserverPosition = useStore(state => state.setObserverPosition)
   const setSelectionMode = useStore(state => state.setSelectionMode)
-  const [isValid, setIsValid] = useState(true)
+  const setSelectedFlight = useStore(state => state.setSelectedFlight)
+  const flights = useStore(state => state.flights)
+
+  const handleFocusPosition = () => {
+    if (controlsRef?.current && observerPosition) {
+      const targetPosition = focusCameraOnGPS(
+        controlsRef.current,
+        observerPosition.latitude,
+        observerPosition.longitude,
+        observerPosition.baro_altitude
+      )
+      animateCameraFocus(controlsRef.current, targetPosition)
+    }
+  }
 
   // Apply dark theme class to body
   useEffect(() => {
@@ -24,25 +41,9 @@ export const Sidebar = () => {
   }, [darkTheme])
 
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const lat = latitude
-    const lon = longitude
-    const baro_alt = baroalt
-
-    // Basic validation
-    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      setIsValid(false)
-      return
-    }
-
-    setIsValid(true)
-    setObserverPosition({ latitude: lat, longitude: lon, baro_altitude: baro_alt })
-  }
-
-  const handleModeSelect = (mode: 'airplane' | 'satellite' | 'spatial') => {
-    setSelectionMode(mode)
+  const handleFlightSelect = (flight: FlightState) => {
+    setSelectedFlight(flight)
+    setSelectionMode(null)
   }
 
   return (
@@ -66,89 +67,32 @@ export const Sidebar = () => {
         />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="latitude" className="block text-sm font-medium mb-1">
-            Latitude
-          </label>
-          <input
-            type="text"
-            id="latitude"
-            value={latitude}
-            onChange={(e) => setLatitude(parseFloat(e.target.value))}
-            className={`w-full px-3 py-2 border rounded-md ${!isValid ? 'border-red-500' : 'border-gray-300'}`}
-            placeholder="e.g. 43.6047"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="longitude" className="block text-sm font-medium mb-1">
-            Longitude
-          </label>
-          <input
-            type="text"
-            id="longitude"
-            value={longitude}
-            onChange={(e) => setLongitude(parseFloat(e.target.value))}
-            className={`w-full px-3 py-2 border rounded-md ${!isValid ? 'border-red-500' : 'border-gray-300'}`}
-            placeholder="e.g. 1.4442"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="baroalt" className="block text-sm font-medium mb-1">
-            Barometer Altitude
-          </label>
-          <input
-            type="text"
-            id="baroalt"
-            value={baroalt}
-            onChange={(e) => setBaroalt(parseFloat(e.target.value))}
-            className={`w-full px-3 py-2 border rounded-md ${!isValid ? 'border-red-500' : 'border-gray-300'}`}
-            placeholder="e.g. 1.4442"
-          />
-        </div>
-
-        {!isValid && (
-          <p className="text-red-500 text-sm">Please enter valid GPS coordinates</p>
-        )}
-
-        <button
-          type="submit"
-          className="w-full bg-sidebar-primary text-sidebar-primary-foreground py-2 px-4 rounded-md hover:bg-opacity-90 transition-colors"
-        >
-          Update Position
-        </button>
-      </form>
+      <ObserverPositionForm onFocusPosition={handleFocusPosition} />
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-2">Modes</h2>
-        <div className="space-y-2">
-          <button
-            className={`w-full py-2 px-4 rounded-md transition-colors ${observerPosition ? 'bg-sidebar-primary hover:bg-opacity-90' : 'bg-gray-400 cursor-not-allowed'}`}
-            onClick={() => handleModeSelect('airplane')}
-            disabled={!observerPosition}
-          >
-            Observer to Airplane
-          </button>
-          <button
-            className={`w-full py-2 px-4 rounded-md transition-colors ${observerPosition ? 'bg-sidebar-primary hover:bg-opacity-90' : 'bg-gray-400 cursor-not-allowed'}`}
-            onClick={() => handleModeSelect('satellite')}
-            disabled={!observerPosition}
-          >
-            Observer to Satellite
-          </button>
-          <button
-            className={`w-full py-2 px-4 rounded-md transition-colors ${observerPosition ? 'bg-sidebar-primary hover:bg-opacity-90' : 'bg-gray-400 cursor-not-allowed'}`}
-            onClick={() => handleModeSelect('spatial')}
-            disabled={!observerPosition}
-          >
-            Observer to Spatial Body
-          </button>
-        </div>
+        <h2 className="text-lg font-semibold mb-2">Flights</h2>
+        
+        {(!flights) ? (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sidebar-primary"></div>
+            <span className="ml-2">Loading flights...</span>
+          </div>
+        ) : (
+          <div className="space-y-2 overflow-y-auto max-h-[50vh] sidebar-accent rounded-lg p-2">
+            {Object.values(flights).map((flight) => (
+              <button
+                key={flight.callsign}
+                onClick={() => handleFlightSelect(flight)}
+                className="w-full text-left p-2 rounded flight-item hover:bg-sidebar-primary hover:bg-opacity-20 transition-colors"
+              >
+                <div className="font-medium">{flight.callsign.trim()}</div>
+                <div className="text-sm text-gray-400">{flight.latitude.toFixed(4)}°N, {flight.longitude.toFixed(4)}°E</div>
+                <div className="text-xs text-gray-500">Alt: {Math.round(flight.baro_altitude)}m</div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-
-      <FlightSidebar />
     </div>
   )
 }

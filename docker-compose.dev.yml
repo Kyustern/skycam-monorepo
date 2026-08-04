@@ -5,13 +5,18 @@ services:
       dockerfile: frontend/Dockerfile.dev
     working_dir: /app
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/eslint.config.js:/app/eslint.config.js
+      - ./frontend/build.ts:/app/build.ts
     ports:
       - "5173:5173"
     environment:
       - NODE_ENV=development
-      - HOST=0.0.0.0
     networks:
       - turret-network
 
@@ -24,6 +29,8 @@ services:
     volumes:
       - ./server/app.py:/app/app.py:ro
       - ./server/requirements.txt:/app/requirements.txt:ro
+      - ./server/services:/app/services:ro
+      - ./server/secrets.json:/app/secrets.json:ro 
     ports:
       - "5000:5000"
     environment:

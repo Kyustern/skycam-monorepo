@@ -12,6 +12,9 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
 # Create static directory (will be populated by volume mounts)
 RUN mkdir -p static
 
+# Create services directory
+RUN mkdir -p services
+
 EXPOSE 5000
 CMD ["python", "app.py"]
 
@@ -35,6 +38,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy server application files
 COPY app.py .
+COPY services/ ./services/
 
 # Copy built frontend to static directory
 RUN mkdir -p static && \

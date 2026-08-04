@@ -8,6 +8,10 @@ export default defineConfig({
   resolve: {tsconfigPaths: true},
   server: {
     proxy: {
+      '/api': {
+        target: 'http://server:5000',
+        changeOrigin: true,
+      },
       '/auth.opensky-network.org': {
         target: 'https://auth.opensky-network.org',
         changeOrigin: true,

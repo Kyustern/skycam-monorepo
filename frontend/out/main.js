@@ -861,7 +861,7 @@ See https://react.dev/link/invalid-hook-call for tips about how to debug and fix
     exports.useTransition = function() {
       return resolveDispatcher().useTransition();
     };
-    exports.version = "19.2.4";
+    exports.version = "19.2.8";
     typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop === "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
   })();
 });
@@ -1315,7 +1315,7 @@ See https://react.dev/link/invalid-hook-call for tips about how to debug and fix
     exports.useFormStatus = function() {
       return resolveDispatcher().useHostTransitionStatus();
     };
-    exports.version = "19.2.4";
+    exports.version = "19.2.8";
     typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop === "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
   })();
 });
@@ -16805,10 +16805,10 @@ Check the top-level render call using <` + componentName2 + ">.");
     };
     (function() {
       var isomorphicReactPackageVersion = React.version;
-      if (isomorphicReactPackageVersion !== "19.2.4")
+      if (isomorphicReactPackageVersion !== "19.2.8")
         throw Error(`Incompatible React versions: The "react" and "react-dom" packages must have the exact same version. Instead got:
   - react:      ` + (isomorphicReactPackageVersion + `
-  - react-dom:  19.2.4
+  - react-dom:  19.2.8
 Learn more: https://react.dev/warnings/version-mismatch`));
     })();
     typeof Map === "function" && Map.prototype != null && typeof Map.prototype.forEach === "function" && typeof Set === "function" && Set.prototype != null && typeof Set.prototype.clear === "function" && typeof Set.prototype.forEach === "function" || console.error("React depends on Map and Set built-in types. Make sure that you load a polyfill in older browsers. https://react.dev/link/react-polyfills");
@@ -16828,10 +16828,10 @@ Learn more: https://react.dev/warnings/version-mismatch`));
     if (!function() {
       var internals = {
         bundleType: 1,
-        version: "19.2.4",
+        version: "19.2.8",
         rendererPackageName: "react-dom",
         currentDispatcherRef: ReactSharedInternals,
-        reconcilerVersion: "19.2.4"
+        reconcilerVersion: "19.2.8"
       };
       internals.overrideHookState = overrideHookState;
       internals.overrideHookStateDeletePath = overrideHookStateDeletePath;
@@ -16891,7 +16891,7 @@ You might need to use a local HTTP server (instead of file://): https://react.de
       listenToAllSupportedEvents(container);
       return new ReactDOMHydrationRoot(initialChildren);
     };
-    exports.version = "19.2.4";
+    exports.version = "19.2.8";
     typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop === "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
   })();
 });
@@ -17141,7 +17141,7 @@ var require_use_sync_external_store_shim_development = __commonJS((exports) => {
         var cachedValue = getSnapshot();
         objectIs(value, cachedValue) || (console.error("The result of getSnapshot should be cached to avoid an infinite loop"), didWarnUncachedGetSnapshot = true);
       }
-      cachedValue = useState3({
+      cachedValue = useState4({
         inst: { value, getSnapshot }
       });
       var inst = cachedValue[0].inst, forceUpdate = cachedValue[1];
@@ -17173,7 +17173,7 @@ var require_use_sync_external_store_shim_development = __commonJS((exports) => {
       return getSnapshot();
     }
     typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-    var objectIs = typeof Object.is === "function" ? Object.is : is, useState3 = React2.useState, useEffect3 = React2.useEffect, useLayoutEffect2 = React2.useLayoutEffect, useDebugValue2 = React2.useDebugValue, didWarnOld18Alpha = false, didWarnUncachedGetSnapshot = false, shim = typeof window === "undefined" || typeof window.document === "undefined" || typeof window.document.createElement === "undefined" ? useSyncExternalStore$1 : useSyncExternalStore$2;
+    var objectIs = typeof Object.is === "function" ? Object.is : is, useState4 = React2.useState, useEffect3 = React2.useEffect, useLayoutEffect2 = React2.useLayoutEffect, useDebugValue2 = React2.useDebugValue, didWarnOld18Alpha = false, didWarnUncachedGetSnapshot = false, shim = typeof window === "undefined" || typeof window.document === "undefined" || typeof window.document.createElement === "undefined" ? useSyncExternalStore$1 : useSyncExternalStore$2;
     exports.useSyncExternalStore = React2.useSyncExternalStore !== undefined ? React2.useSyncExternalStore : shim;
     typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop === "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
   })();
@@ -17481,11 +17481,11 @@ var require_jsx_runtime = __commonJS((exports, module) => {
 });
 
 // src/main.tsx
-var import_react19 = __toESM(require_react(), 1);
+var import_react20 = __toESM(require_react(), 1);
 var import_client = __toESM(require_client(), 1);
 
 // src/components/layout/Sidebar.tsx
-var import_react2 = __toESM(require_react(), 1);
+var import_react3 = __toESM(require_react(), 1);
 
 // node_modules/zustand/esm/vanilla.mjs
 var createStoreImpl = (createState) => {
@@ -17548,99 +17548,16 @@ var useStore2 = create((set) => ({
   setControls: (controls) => set({ controls })
 }));
 
-// src/components/layout/FlightSidebar.tsx
+// src/components/layout/ObserverPositionForm.tsx
+var import_react2 = __toESM(require_react(), 1);
 var jsx_dev_runtime = __toESM(require_jsx_dev_runtime(), 1);
-var FlightSidebar = () => {
-  const selectionMode = useStore2((state) => state.selectionMode);
-  const setSelectionMode = useStore2((state) => state.setSelectionMode);
-  const setSelectedFlight = useStore2((state) => state.setSelectedFlight);
-  const flights = useStore2((state) => state.flights);
-  const handleFlightSelect = (flight) => {
-    setSelectedFlight(flight);
-    setSelectionMode(null);
-  };
-  if (selectionMode !== "airplane")
-    return null;
-  if (!flights)
-    return /* @__PURE__ */ jsx_dev_runtime.jsxDEV("div", {
-      className: "flex items-center justify-center h-[70vh]",
-      children: [
-        /* @__PURE__ */ jsx_dev_runtime.jsxDEV("div", {
-          className: "animate-spin rounded-full h-8 w-8 border-b-2 border-sidebar-primary"
-        }, undefined, false, undefined, this),
-        /* @__PURE__ */ jsx_dev_runtime.jsxDEV("span", {
-          className: "ml-2",
-          children: "Loading flights..."
-        }, undefined, false, undefined, this)
-      ]
-    }, undefined, true, undefined, this);
-  if (flights)
-    return /* @__PURE__ */ jsx_dev_runtime.jsxDEV("div", {
-      className: "fixed left-[10%] top-0 h-full w-64 sidebar text-sidebar-foreground p-4 z-20 shadow-lg dark-theme",
-      children: [
-        /* @__PURE__ */ jsx_dev_runtime.jsxDEV("h2", {
-          className: "text-lg font-semibold mb-4",
-          children: "Select Flight"
-        }, undefined, false, undefined, this),
-        /* @__PURE__ */ jsx_dev_runtime.jsxDEV("div", {
-          className: "space-y-2 overflow-y-auto h-[70vh] sidebar-accent rounded-lg p-2",
-          children: Object.values(flights).map((flight) => /* @__PURE__ */ jsx_dev_runtime.jsxDEV("button", {
-            onClick: () => handleFlightSelect(flight),
-            className: "w-full text-left p-2 rounded flight-item hover:bg-sidebar-primary hover:bg-opacity-20 transition-colors",
-            children: [
-              /* @__PURE__ */ jsx_dev_runtime.jsxDEV("div", {
-                className: "font-medium",
-                children: flight.callsign.trim()
-              }, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime.jsxDEV("div", {
-                className: "text-sm text-gray-400",
-                children: [
-                  flight.latitude.toFixed(4),
-                  "°N, ",
-                  flight.longitude.toFixed(4),
-                  "°E"
-                ]
-              }, undefined, true, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime.jsxDEV("div", {
-                className: "text-xs text-gray-500",
-                children: [
-                  "Alt: ",
-                  Math.round(flight.baro_altitude),
-                  "m"
-                ]
-              }, undefined, true, undefined, this)
-            ]
-          }, flight.callsign, true, undefined, this))
-        }, undefined, false, undefined, this),
-        /* @__PURE__ */ jsx_dev_runtime.jsxDEV("button", {
-          onClick: () => setSelectionMode(null),
-          className: "absolute top-4 right-4 accent text-sidebar-primary-foreground px-2 py-1 rounded hover:bg-opacity-80 transition-colors",
-          children: "×"
-        }, undefined, false, undefined, this)
-      ]
-    }, undefined, true, undefined, this);
-};
-
-// src/components/layout/Sidebar.tsx
-var jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime(), 1);
-var Sidebar = () => {
+var ObserverPositionForm = ({ onPositionUpdate }) => {
   const observerPosition = useStore2((state) => state.observerPosition);
-  const [latitude, setLatitude] = import_react2.useState(observerPosition.latitude);
-  const [longitude, setLongitude] = import_react2.useState(observerPosition.longitude);
-  const [baroalt, setBaroalt] = import_react2.useState(observerPosition.baro_altitude);
-  const [darkTheme, setDarkTheme] = import_react2.useState(false);
-  const darkness = useStore2((state) => state.darkness);
-  const setDarkness = useStore2((state) => state.setDarkness);
   const setObserverPosition = useStore2((state) => state.setObserverPosition);
-  const setSelectionMode = useStore2((state) => state.setSelectionMode);
+  const [latitude, setLatitude] = import_react2.useState(observerPosition?.latitude || 0);
+  const [longitude, setLongitude] = import_react2.useState(observerPosition?.longitude || 0);
+  const [baroalt, setBaroalt] = import_react2.useState(observerPosition?.baro_altitude || 0);
   const [isValid, setIsValid] = import_react2.useState(true);
-  import_react2.useEffect(() => {
-    if (darkTheme) {
-      document.body.classList.add("dark-theme");
-    } else {
-      document.body.classList.remove("dark-theme");
-    }
-  }, [darkTheme]);
   const handleSubmit = (e) => {
     e.preventDefault();
     const lat = latitude;
@@ -17651,10 +17568,122 @@ var Sidebar = () => {
       return;
     }
     setIsValid(true);
-    setObserverPosition({ latitude: lat, longitude: lon, baro_altitude: baro_alt });
+    const newPosition = { latitude: lat, longitude: lon, baro_altitude: baro_alt };
+    setObserverPosition(newPosition);
+    if (onPositionUpdate) {
+      onPositionUpdate(newPosition);
+    }
   };
-  const handleModeSelect = (mode) => {
-    setSelectionMode(mode);
+  return /* @__PURE__ */ jsx_dev_runtime.jsxDEV("form", {
+    onSubmit: handleSubmit,
+    className: "space-y-4",
+    children: [
+      /* @__PURE__ */ jsx_dev_runtime.jsxDEV("table", {
+        className: "w-full text-sm",
+        children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tbody", {
+          children: [
+            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
+              children: [
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2 pr-4 text-right font-medium",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
+                    htmlFor: "latitude",
+                    children: "Latitude"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
+                    type: "text",
+                    id: "latitude",
+                    value: latitude,
+                    onChange: (e) => setLatitude(parseFloat(e.target.value)),
+                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
+                    placeholder: "e.g. 43.6047"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this)
+              ]
+            }, undefined, true, undefined, this),
+            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
+              children: [
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2 pr-4 text-right font-medium",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
+                    htmlFor: "longitude",
+                    children: "Longitude"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
+                    type: "text",
+                    id: "longitude",
+                    value: longitude,
+                    onChange: (e) => setLongitude(parseFloat(e.target.value)),
+                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
+                    placeholder: "e.g. 1.4442"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this)
+              ]
+            }, undefined, true, undefined, this),
+            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
+              children: [
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2 pr-4 text-right font-medium",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
+                    htmlFor: "baroalt",
+                    children: "Altitude"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
+                    type: "text",
+                    id: "baroalt",
+                    value: baroalt,
+                    onChange: (e) => setBaroalt(parseFloat(e.target.value)),
+                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
+                    placeholder: "e.g. 50"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this)
+              ]
+            }, undefined, true, undefined, this)
+          ]
+        }, undefined, true, undefined, this)
+      }, undefined, false, undefined, this),
+      !isValid && /* @__PURE__ */ jsx_dev_runtime.jsxDEV("p", {
+        className: "text-red-500 text-sm",
+        children: "Please enter valid GPS coordinates"
+      }, undefined, false, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime.jsxDEV("button", {
+        type: "submit",
+        className: "w-full bg-sidebar-primary text-sidebar-primary-foreground py-2 px-4 rounded-md hover:bg-opacity-90 transition-colors",
+        children: "Update Position"
+      }, undefined, false, undefined, this)
+    ]
+  }, undefined, true, undefined, this);
+};
+
+// src/components/layout/Sidebar.tsx
+var jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime(), 1);
+var Sidebar = () => {
+  const observerPosition = useStore2((state) => state.observerPosition);
+  const [darkTheme, setDarkTheme] = import_react3.useState(false);
+  const darkness = useStore2((state) => state.darkness);
+  const setDarkness = useStore2((state) => state.setDarkness);
+  const setSelectionMode = useStore2((state) => state.setSelectionMode);
+  const setSelectedFlight = useStore2((state) => state.setSelectedFlight);
+  const flights = useStore2((state) => state.flights);
+  import_react3.useEffect(() => {
+    if (darkTheme) {
+      document.body.classList.add("dark-theme");
+    } else {
+      document.body.classList.remove("dark-theme");
+    }
+  }, [darkTheme]);
+  const handleFlightSelect = (flight) => {
+    setSelectedFlight(flight);
+    setSelectionMode(null);
   };
   return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
     className: "h-full sidebar text-sidebar-foreground p-4 z-10 col-span-1 dark-theme",
@@ -17682,105 +17711,57 @@ var Sidebar = () => {
           }, undefined, false, undefined, this)
         ]
       }, undefined, true, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("form", {
-        onSubmit: handleSubmit,
-        className: "space-y-4",
-        children: [
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-            children: [
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("label", {
-                htmlFor: "latitude",
-                className: "block text-sm font-medium mb-1",
-                children: "Latitude"
-              }, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("input", {
-                type: "text",
-                id: "latitude",
-                value: latitude,
-                onChange: (e) => setLatitude(parseFloat(e.target.value)),
-                className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
-                placeholder: "e.g. 43.6047"
-              }, undefined, false, undefined, this)
-            ]
-          }, undefined, true, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-            children: [
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("label", {
-                htmlFor: "longitude",
-                className: "block text-sm font-medium mb-1",
-                children: "Longitude"
-              }, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("input", {
-                type: "text",
-                id: "longitude",
-                value: longitude,
-                onChange: (e) => setLongitude(parseFloat(e.target.value)),
-                className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
-                placeholder: "e.g. 1.4442"
-              }, undefined, false, undefined, this)
-            ]
-          }, undefined, true, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-            children: [
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("label", {
-                htmlFor: "baroalt",
-                className: "block text-sm font-medium mb-1",
-                children: "Barometer Altitude"
-              }, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("input", {
-                type: "text",
-                id: "baroalt",
-                value: baroalt,
-                onChange: (e) => setBaroalt(parseFloat(e.target.value)),
-                className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
-                placeholder: "e.g. 1.4442"
-              }, undefined, false, undefined, this)
-            ]
-          }, undefined, true, undefined, this),
-          !isValid && /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("p", {
-            className: "text-red-500 text-sm",
-            children: "Please enter valid GPS coordinates"
-          }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
-            type: "submit",
-            className: "w-full bg-sidebar-primary text-sidebar-primary-foreground py-2 px-4 rounded-md hover:bg-opacity-90 transition-colors",
-            children: "Update Position"
-          }, undefined, false, undefined, this)
-        ]
-      }, undefined, true, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ObserverPositionForm, {}, undefined, false, undefined, this),
       /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
         className: "mt-8",
         children: [
           /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("h2", {
             className: "text-lg font-semibold mb-2",
-            children: "Modes"
+            children: "Flights"
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-            className: "space-y-2",
+          !flights ? /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+            className: "flex items-center justify-center py-4",
             children: [
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
-                className: `w-full py-2 px-4 rounded-md transition-colors ${observerPosition ? "bg-sidebar-primary hover:bg-opacity-90" : "bg-gray-400 cursor-not-allowed"}`,
-                onClick: () => handleModeSelect("airplane"),
-                disabled: !observerPosition,
-                children: "Observer to Airplane"
+              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+                className: "animate-spin rounded-full h-8 w-8 border-b-2 border-sidebar-primary"
               }, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
-                className: `w-full py-2 px-4 rounded-md transition-colors ${observerPosition ? "bg-sidebar-primary hover:bg-opacity-90" : "bg-gray-400 cursor-not-allowed"}`,
-                onClick: () => handleModeSelect("satellite"),
-                disabled: !observerPosition,
-                children: "Observer to Satellite"
-              }, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
-                className: `w-full py-2 px-4 rounded-md transition-colors ${observerPosition ? "bg-sidebar-primary hover:bg-opacity-90" : "bg-gray-400 cursor-not-allowed"}`,
-                onClick: () => handleModeSelect("spatial"),
-                disabled: !observerPosition,
-                children: "Observer to Spatial Body"
+              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+                className: "ml-2",
+                children: "Loading flights..."
               }, undefined, false, undefined, this)
             ]
-          }, undefined, true, undefined, this)
+          }, undefined, true, undefined, this) : /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+            className: "space-y-2 overflow-y-auto max-h-[50vh] sidebar-accent rounded-lg p-2",
+            children: Object.values(flights).map((flight) => /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
+              onClick: () => handleFlightSelect(flight),
+              className: "w-full text-left p-2 rounded flight-item hover:bg-sidebar-primary hover:bg-opacity-20 transition-colors",
+              children: [
+                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+                  className: "font-medium",
+                  children: flight.callsign.trim()
+                }, undefined, false, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+                  className: "text-sm text-gray-400",
+                  children: [
+                    flight.latitude.toFixed(4),
+                    "°N, ",
+                    flight.longitude.toFixed(4),
+                    "°E"
+                  ]
+                }, undefined, true, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+                  className: "text-xs text-gray-500",
+                  children: [
+                    "Alt: ",
+                    Math.round(flight.baro_altitude),
+                    "m"
+                  ]
+                }, undefined, true, undefined, this)
+              ]
+            }, flight.callsign, true, undefined, this))
+          }, undefined, false, undefined, this)
         ]
-      }, undefined, true, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(FlightSidebar, {}, undefined, false, undefined, this)
+      }, undefined, true, undefined, this)
     ]
   }, undefined, true, undefined, this);
 };
@@ -55383,18 +55364,18 @@ class WebGLRenderer {
   }
 }
 
-// node_modules/@react-three/fiber/dist/events-5a94e5eb.esm.js
+// node_modules/@react-three/fiber/dist/events-156d8d12.esm.js
 var React3 = __toESM(require_react(), 1);
-var import_react4 = __toESM(require_react(), 1);
+var import_react5 = __toESM(require_react(), 1);
 
 // node_modules/zustand/esm/traditional.mjs
-var import_react3 = __toESM(require_react(), 1);
+var import_react4 = __toESM(require_react(), 1);
 var import_with_selector = __toESM(require_with_selector(), 1);
 var { useSyncExternalStoreWithSelector } = import_with_selector.default;
 var identity2 = (arg) => arg;
 function useStoreWithEqualityFn(api, selector = identity2, equalityFn) {
   const slice = useSyncExternalStoreWithSelector(api.subscribe, api.getState, api.getInitialState, selector, equalityFn);
-  import_react3.default.useDebugValue(slice);
+  import_react4.default.useDebugValue(slice);
   return slice;
 }
 var createWithEqualityFnImpl = (createState, defaultEqualityFn) => {
@@ -55474,7 +55455,7 @@ var clear = (keys) => {
   }
 };
 
-// node_modules/@react-three/fiber/dist/events-5a94e5eb.esm.js
+// node_modules/@react-three/fiber/dist/events-156d8d12.esm.js
 var import_scheduler = __toESM(require_scheduler(), 1);
 var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
 
@@ -55559,7 +55540,7 @@ function x() {
   return o.useMemo(() => Array.from(e.keys()).reduce((t, r) => (n) => /* @__PURE__ */ o.createElement(t, null, /* @__PURE__ */ o.createElement(r.Provider, { ...n, value: e.get(r) })), (t) => /* @__PURE__ */ o.createElement(m, { ...t })), [e]);
 }
 
-// node_modules/@react-three/fiber/dist/events-5a94e5eb.esm.js
+// node_modules/@react-three/fiber/dist/events-156d8d12.esm.js
 function findInitialRoot(instance) {
   let root = instance.root;
   while (root.getState().previousRoot)
@@ -55857,9 +55838,9 @@ function diffProps(instance, newProps) {
     if (root.constructor && root.constructor.length === 0) {
       const ctor = getMemoizedPrototype(root);
       if (!is.und(ctor))
-        changedProps[key] = ctor[key];
+        changedProps[prop] = ctor[key];
     } else {
-      changedProps[key] = 0;
+      changedProps[prop] = 0;
     }
   }
   return changedProps;
@@ -55909,6 +55890,21 @@ function applyProps(object, props) {
         target.setScalar(value);
       else
         target.set(value);
+    } else if (root instanceof ShaderMaterial && key === "uniforms" && is.obj(value)) {
+      if (!is.obj(root.uniforms))
+        root.uniforms = {};
+      const uniforms = root.uniforms;
+      const nextUniforms = value;
+      for (const name in nextUniforms) {
+        const uniform = nextUniforms[name];
+        const targetUniform = uniforms[name];
+        if (targetUniform)
+          Object.assign(targetUniform, uniform);
+        else
+          uniforms[name] = {
+            ...uniform
+          };
+      }
     } else {
       var _root$key;
       root[key] = value;
@@ -55971,6 +55967,37 @@ function releaseInternalPointerCapture(capturedMap, obj, captures, pointerId) {
       captureData.target.releasePointerCapture(pointerId);
     }
   }
+}
+function swapInteractivity(store, object, newObject) {
+  const {
+    internal
+  } = store.getState();
+  for (let i2 = 0;i2 < internal.interaction.length; i2++) {
+    if (internal.interaction[i2] === object)
+      internal.interaction[i2] = newObject;
+  }
+  for (let i2 = 0;i2 < internal.initialHits.length; i2++) {
+    if (internal.initialHits[i2] === object)
+      internal.initialHits[i2] = newObject;
+  }
+  internal.hovered.forEach((value, key) => {
+    if (value.eventObject === object || value.object === object) {
+      internal.hovered.delete(key);
+      const next = {
+        ...value,
+        eventObject: value.eventObject === object ? newObject : value.eventObject,
+        object: value.object === object ? newObject : value.object
+      };
+      internal.hovered.set(makeId(next), next);
+    }
+  });
+  internal.capturedMap.forEach((captures) => {
+    const captureData = captures.get(object);
+    if (captureData) {
+      captures.delete(object);
+      captures.set(newObject, captureData);
+    }
+  });
 }
 function removeInteractivity(store, object) {
   const {
@@ -56548,9 +56575,10 @@ var t = 1;
 var o2 = 8;
 var r = 32;
 var e = 2;
+var i$1 = 268435456;
 var packageData = {
   name: "@react-three/fiber",
-  version: "9.5.0",
+  version: "9.7.0",
   description: "A React renderer for Threejs",
   keywords: [
     "react",
@@ -63471,7 +63499,7 @@ Check the render method of %s.`, G(di) || "Unknown")), i2 = zo(n), i2.payload = 
       function Ic() {
         return di;
       }
-      var le = {}, qm = import_react4.default, St = import_scheduler.default, ze = Object.assign, Uh = Symbol.for("react.element"), Ho = Symbol.for("react.transitional.element"), Ao = Symbol.for("react.portal"), ol = Symbol.for("react.fragment"), Lc = Symbol.for("react.strict_mode"), Uf = Symbol.for("react.profiler"), ei = Symbol.for("react.consumer"), on = Symbol.for("react.context"), jn = Symbol.for("react.forward_ref"), Nc = Symbol.for("react.suspense"), Bf = Symbol.for("react.suspense_list"), al = Symbol.for("react.memo"), kt = Symbol.for("react.lazy");
+      var le = {}, qm = import_react5.default, St = import_scheduler.default, ze = Object.assign, Uh = Symbol.for("react.element"), Ho = Symbol.for("react.transitional.element"), Ao = Symbol.for("react.portal"), ol = Symbol.for("react.fragment"), Lc = Symbol.for("react.strict_mode"), Uf = Symbol.for("react.profiler"), ei = Symbol.for("react.consumer"), on = Symbol.for("react.context"), jn = Symbol.for("react.forward_ref"), Nc = Symbol.for("react.suspense"), Bf = Symbol.for("react.suspense_list"), al = Symbol.for("react.memo"), kt = Symbol.for("react.lazy");
       var Ds = Symbol.for("react.activity");
       var Bh = Symbol.for("react.memo_cache_sentinel");
       var ni = Symbol.iterator, il = Symbol.for("react.client.reference"), fn = Array.isArray, x2 = qm.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, Jt = m2.rendererVersion, Zt = m2.rendererPackageName, jo = m2.extraDevToolsConfig, ot = m2.getPublicInstance, Zr = m2.getRootHostContext, Dn = m2.getChildHostContext, Ws = m2.prepareForCommit, pa = m2.resetAfterCommit, Fc = m2.createInstance;
@@ -64862,6 +64890,11 @@ function handleContainerEffects(parent, child, beforeChild) {
 function appendChild(parent, child) {
   if (!child)
     return;
+  if (child.parent === parent) {
+    const childIndex = parent.children.indexOf(child);
+    if (childIndex !== -1)
+      parent.children.splice(childIndex, 1);
+  }
   child.parent = parent;
   parent.children.push(child);
   handleContainerEffects(parent, child);
@@ -64869,6 +64902,11 @@ function appendChild(parent, child) {
 function insertBefore(parent, child, beforeChild) {
   if (!child || !beforeChild)
     return;
+  if (child.parent === parent) {
+    const childIndex2 = parent.children.indexOf(child);
+    if (childIndex2 !== -1)
+      parent.children.splice(childIndex2, 1);
+  }
   child.parent = parent;
   const childIndex = parent.children.indexOf(beforeChild);
   if (childIndex !== -1)
@@ -64931,7 +64969,16 @@ function setFiberRef(fiber, publicInstance) {
   }
 }
 var reconstructed = [];
-function swapInstances() {
+function flushReconstructedInstances() {
+  if (reconstructed.length === 0)
+    return;
+  try {
+    swapReconstructedInstances();
+  } finally {
+    reconstructed.length = 0;
+  }
+}
+function swapReconstructedInstances() {
   for (const [instance] of reconstructed) {
     const parent = instance.parent;
     if (parent) {
@@ -64961,9 +65008,11 @@ function swapInstances() {
     if (parent) {
       var _instance$props$objec, _instance$props$args;
       const target = catalogue[toPascalCase(instance.type)];
+      const prevObject = instance.object;
       instance.object = (_instance$props$objec = instance.props.object) != null ? _instance$props$objec : new target(...(_instance$props$args = instance.props.args) != null ? _instance$props$args : []);
       instance.object.__r3f = instance;
       setFiberRef(fiber, instance.object);
+      swapInteractivity(findInitialRoot(instance), prevObject, instance.object);
       applyProps(instance.object, instance.props);
       if (instance.props.attach) {
         attach(parent, instance);
@@ -64980,13 +65029,113 @@ function swapInstances() {
       invalidateInstance(instance);
     }
   }
-  reconstructed.length = 0;
 }
 var handleTextInstance = () => {};
 var NO_CONTEXT = {};
 var currentUpdatePriority = NoEventPriority;
-var NoFlags = 0;
-var Update = 4;
+function getEventPriority(type) {
+  switch (type) {
+    case "beforetoggle":
+    case "cancel":
+    case "click":
+    case "close":
+    case "contextmenu":
+    case "copy":
+    case "cut":
+    case "auxclick":
+    case "dblclick":
+    case "dragend":
+    case "dragstart":
+    case "drop":
+    case "focusin":
+    case "focusout":
+    case "input":
+    case "invalid":
+    case "keydown":
+    case "keypress":
+    case "keyup":
+    case "mousedown":
+    case "mouseup":
+    case "paste":
+    case "pause":
+    case "play":
+    case "pointercancel":
+    case "pointerdown":
+    case "pointerup":
+    case "ratechange":
+    case "reset":
+    case "resize":
+    case "seeked":
+    case "submit":
+    case "touchcancel":
+    case "touchend":
+    case "touchstart":
+    case "volumechange":
+    case "change":
+    case "selectionchange":
+    case "compositionstart":
+    case "compositionend":
+    case "compositionupdate":
+    case "beforeinput":
+    case "blur":
+    case "fullscreenchange":
+    case "focus":
+    case "hashchange":
+    case "popstate":
+    case "select":
+    case "selectstart":
+      return e;
+    case "drag":
+    case "dragenter":
+    case "dragexit":
+    case "dragleave":
+    case "dragover":
+    case "mousemove":
+    case "mouseout":
+    case "mouseover":
+    case "pointermove":
+    case "pointerout":
+    case "pointerover":
+    case "scroll":
+    case "touchmove":
+    case "wheel":
+    case "mouseenter":
+    case "mouseleave":
+    case "pointerenter":
+    case "pointerleave":
+      return o2;
+    case "message": {
+      switch (import_scheduler.unstable_getCurrentPriorityLevel()) {
+        case import_scheduler.unstable_ImmediatePriority:
+          return e;
+        case import_scheduler.unstable_UserBlockingPriority:
+          return o2;
+        case import_scheduler.unstable_NormalPriority:
+        case import_scheduler.unstable_LowPriority:
+          return r;
+        case import_scheduler.unstable_IdlePriority:
+          return i$1;
+        default:
+          return r;
+      }
+    }
+    default:
+      return r;
+  }
+}
+function scheduleMicrotask(callback) {
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(callback);
+  } else if (typeof Promise !== "undefined") {
+    Promise.resolve().then(callback).catch((error2) => {
+      setTimeout(() => {
+        throw error2;
+      });
+    });
+  } else {
+    setTimeout(callback);
+  }
+}
 var reconciler = /* @__PURE__ */ createReconciler({
   isPrimaryRenderer: false,
   warnsIfNotActing: false,
@@ -65032,26 +65181,25 @@ var reconciler = /* @__PURE__ */ createReconciler({
     }))
       reconstruct = true;
     if (reconstruct) {
-      reconstructed.push([instance, {
-        ...newProps
-      }, fiber]);
+      reconstructed.push([instance, getInstanceProps(newProps), fiber]);
     } else {
       const changedProps = diffProps(instance, newProps);
-      if (Object.keys(changedProps).length) {
-        Object.assign(instance.props, changedProps);
+      const attach2 = instance.props.attach;
+      instance.props = getInstanceProps(newProps);
+      if (attach2 !== undefined)
+        instance.props.attach = attach2;
+      else
+        delete instance.props.attach;
+      if (Object.keys(changedProps).length)
         applyProps(instance.object, changedProps);
-      }
     }
-    const isTailSibling = fiber.sibling === null || (fiber.flags & Update) === NoFlags;
-    if (isTailSibling)
-      swapInstances();
   },
   finalizeInitialChildren: () => false,
   commitMount() {},
   getPublicInstance: (instance) => instance == null ? undefined : instance.object,
   prepareForCommit: () => null,
   preparePortalMount: (container) => prepare(container.getState().scene, container, "", {}),
-  resetAfterCommit: () => {},
+  resetAfterCommit: flushReconstructedInstances,
   shouldSetTextContent: () => false,
   clearContainer: () => false,
   hideInstance,
@@ -65059,6 +65207,8 @@ var reconciler = /* @__PURE__ */ createReconciler({
   createTextInstance: handleTextInstance,
   hideTextInstance: handleTextInstance,
   unhideTextInstance: handleTextInstance,
+  supportsMicrotasks: true,
+  scheduleMicrotask,
   scheduleTimeout: typeof setTimeout === "function" ? setTimeout : undefined,
   cancelTimeout: typeof clearTimeout === "function" ? clearTimeout : undefined,
   noTimeout: -1,
@@ -65089,24 +65239,10 @@ var reconciler = /* @__PURE__ */ createReconciler({
     var _window$event;
     if (currentUpdatePriority !== NoEventPriority)
       return currentUpdatePriority;
-    switch (typeof window !== "undefined" && ((_window$event = window.event) == null ? undefined : _window$event.type)) {
-      case "click":
-      case "contextmenu":
-      case "dblclick":
-      case "pointercancel":
-      case "pointerdown":
-      case "pointerup":
-        return e;
-      case "pointermove":
-      case "pointerout":
-      case "pointerover":
-      case "pointerenter":
-      case "pointerleave":
-      case "wheel":
-        return o2;
-      default:
-        return r;
-    }
+    const eventType = typeof window !== "undefined" ? (_window$event = window.event) == null ? undefined : _window$event.type : undefined;
+    if (eventType === undefined)
+      return r;
+    return getEventPriority(eventType);
   },
   resetFormInstance() {},
   rendererPackageName: "@react-three/fiber",
@@ -65663,7 +65799,7 @@ function createPointerEvents(store) {
 var React4 = __toESM(require_react(), 1);
 
 // node_modules/react-use-measure/dist/index.js
-var import_react5 = __toESM(require_react(), 1);
+var import_react6 = __toESM(require_react(), 1);
 function g(n, t2) {
   let o3;
   return (...i3) => {
@@ -65675,9 +65811,9 @@ function j({ debounce: n, scroll: t2, polyfill: o3, offsetSize: i3 } = { debounc
   } : window.ResizeObserver);
   if (!a2)
     throw new Error("This browser does not support ResizeObserver out of the box. See: https://github.com/react-spring/react-use-measure/#resize-observer-polyfills");
-  const [c2, h2] = import_react5.useState({ left: 0, top: 0, width: 0, height: 0, bottom: 0, right: 0, x: 0, y: 0 }), e2 = import_react5.useRef({ element: null, scrollContainers: null, resizeObserver: null, lastBounds: c2, orientationHandler: null }), d = n ? typeof n == "number" ? n : n.scroll : null, f = n ? typeof n == "number" ? n : n.resize : null, w = import_react5.useRef(false);
-  import_react5.useEffect(() => (w.current = true, () => void (w.current = false)));
-  const [z, m2, s] = import_react5.useMemo(() => {
+  const [c2, h2] = import_react6.useState({ left: 0, top: 0, width: 0, height: 0, bottom: 0, right: 0, x: 0, y: 0 }), e2 = import_react6.useRef({ element: null, scrollContainers: null, resizeObserver: null, lastBounds: c2, orientationHandler: null }), d = n ? typeof n == "number" ? n : n.scroll : null, f = n ? typeof n == "number" ? n : n.resize : null, w = import_react6.useRef(false);
+  import_react6.useEffect(() => (w.current = true, () => void (w.current = false)));
+  const [z, m2, s] = import_react6.useMemo(() => {
     const r2 = () => {
       if (!e2.current.element)
         return;
@@ -65697,18 +65833,18 @@ function j({ debounce: n, scroll: t2, polyfill: o3, offsetSize: i3 } = { debounc
   const L = (r2) => {
     !r2 || r2 === e2.current.element || (v(), e2.current.element = r2, e2.current.scrollContainers = E(r2), b2());
   };
-  return X(s, !!t2), W(m2), import_react5.useEffect(() => {
+  return X(s, !!t2), W(m2), import_react6.useEffect(() => {
     v(), b2();
-  }, [t2, s, m2]), import_react5.useEffect(() => v, []), [L, c2, z];
+  }, [t2, s, m2]), import_react6.useEffect(() => v, []), [L, c2, z];
 }
 function W(n) {
-  import_react5.useEffect(() => {
+  import_react6.useEffect(() => {
     const t2 = n;
     return window.addEventListener("resize", t2), () => void window.removeEventListener("resize", t2);
   }, [n]);
 }
 function X(n, t2) {
-  import_react5.useEffect(() => {
+  import_react6.useEffect(() => {
     if (t2) {
       const o3 = n;
       return window.addEventListener("scroll", o3, { capture: true, passive: true }), () => void window.removeEventListener("scroll", o3, true);
@@ -66650,8 +66786,8 @@ function SDFGenerator() {
           case "C": {
             var prevCurveX$1 = startX;
             var prevCurveY$1 = startY;
-            for (var i$1 = 1;i$1 < curvePoints; i$1++) {
-              pointOnCubicBezier(startX, startY, ctrl1X, ctrl1Y, ctrl2X, ctrl2Y, endX, endY, i$1 / (curvePoints - 1), tempPoint);
+            for (var i$12 = 1;i$12 < curvePoints; i$12++) {
+              pointOnCubicBezier(startX, startY, ctrl1X, ctrl1Y, ctrl2X, ctrl2Y, endX, endY, i$12 / (curvePoints - 1), tempPoint);
               segmentCallback(prevCurveX$1, prevCurveY$1, tempPoint.x, tempPoint.y);
               prevCurveX$1 = tempPoint.x;
               prevCurveY$1 = tempPoint.y;
@@ -67340,16 +67476,16 @@ function bidiFactory() {
       var isolationPairs = new Map;
       var paragraphs = [];
       var paragraph = null;
-      for (var i$1 = 0;i$1 < string.length; i$1++) {
+      for (var i$12 = 0;i$12 < string.length; i$12++) {
         if (!paragraph) {
           paragraphs.push(paragraph = {
-            start: i$1,
+            start: i$12,
             end: string.length - 1,
-            level: baseDirection === "rtl" ? 1 : baseDirection === "ltr" ? 0 : determineAutoEmbedLevel(i$1, false)
+            level: baseDirection === "rtl" ? 1 : baseDirection === "ltr" ? 0 : determineAutoEmbedLevel(i$12, false)
           });
         }
-        if (charTypes[i$1] & TYPE_B) {
-          paragraph.end = i$1;
+        if (charTypes[i$12] & TYPE_B) {
+          paragraph.end = i$12;
           paragraph = null;
         }
       }
@@ -67603,8 +67739,8 @@ function bidiFactory() {
           }
           if (charTypeCounts.get(TYPE_EN)) {
             for (var si$4 = 0;si$4 < seqIndices$1.length; si$4++) {
-              var i$12 = seqIndices$1[si$4];
-              if (charTypes[i$12] & TYPE_EN) {
+              var i$122 = seqIndices$1[si$4];
+              if (charTypes[i$122] & TYPE_EN) {
                 for (var sj$4 = si$4 - 1;sj$4 >= 0 && charTypes[seqIndices$1[sj$4]] & (TYPE_ET | BN_LIKE_TYPES); sj$4--) {
                   changeCharType(seqIndices$1[sj$4], TYPE_EN);
                 }
@@ -67869,8 +68005,8 @@ function bidiFactory() {
           }
           var maxLevel = paragraph.level;
           var minOddLevel = Infinity;
-          for (var i$1 = 0;i$1 < lineLevels.length; i$1++) {
-            var level = lineLevels[i$1];
+          for (var i$12 = 0;i$12 < lineLevels.length; i$12++) {
+            var level = lineLevels[i$12];
             if (level > maxLevel) {
               maxLevel = level;
             }
@@ -68179,15 +68315,21 @@ vec2 troika_uv_${key};
 ${vertexShader}
 `;
     vertexDefs = `${vertexDefs}
-void troikaVertexTransform${key}(inout vec3 position, inout vec3 normal, inout vec2 uv) {
+void troikaVertexTransform${key}() {
+  vec3 position = troika_position_${key};
+  vec3 normal = troika_normal_${key};
+  vec2 uv = troika_uv_${key};
   ${vertexTransform}
+  troika_position_${key} = position;
+  troika_normal_${key} = normal;
+  troika_uv_${key} = uv;
 }
 `;
     vertexMainIntro = `
 troika_position_${key} = vec3(position);
 troika_normal_${key} = vec3(normal);
 troika_uv_${key} = vec2(uv);
-troikaVertexTransform${key}(troika_position_${key}, troika_normal_${key}, troika_uv_${key});
+troikaVertexTransform${key}();
 ${vertexMainIntro}
 `;
     vertexShader = vertexShader.replace(/\b(position|normal|uv)\b/g, (match, match1, index, fullStr) => {
@@ -72938,10 +73080,10 @@ var Stars = /* @__PURE__ */ React8.forwardRef(({
   }));
 });
 // src/components/layout/MainScene.tsx
-var import_react16 = __toESM(require_react(), 1);
+var import_react17 = __toESM(require_react(), 1);
 
 // src/components/AirplaneMarker.tsx
-var import_react6 = __toESM(require_react(), 1);
+var import_react7 = __toESM(require_react(), 1);
 
 // src/utilities/unitConversions.ts
 var REAL_EARTH_RADIUS_KM = 6371;
@@ -72996,7 +73138,7 @@ var AirplaneMarker = () => {
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
   const flights = useStore2((state2) => state2.flights);
   const controls = useStore2((state2) => state2.controls);
-  const computeFlightPosVector = import_react6.useCallback((flight) => {
+  const computeFlightPosVector = import_react7.useCallback((flight) => {
     const earthRadius = 5;
     const altitudeScale = 1;
     const latRad = MathUtils.degToRad(flight.latitude);
@@ -73024,7 +73166,7 @@ var AirplaneMarker = () => {
       q
     };
   });
-  const markers = import_react6.useMemo(() => {
+  const markers = import_react7.useMemo(() => {
     if (!flights)
       return null;
     return Object.values(flights).map((flight) => {
@@ -73077,20 +73219,20 @@ var AirplaneMarker = () => {
       }, undefined, true, undefined, this);
     });
   }, [computeFlightPosVector, flights, selectedFlight?.callsign]);
-  if (!selectedFlight)
+  if (!flights)
     return null;
   return markers;
 };
 
 // src/components/AzimuthAngleOverlay.tsx
-var import_react7 = __toESM(require_react(), 1);
+var import_react8 = __toESM(require_react(), 1);
 var jsx_dev_runtime4 = __toESM(require_jsx_dev_runtime(), 1);
 var NORTH_POLE = new Vector3(0, SCENE_EARTH_RADIUS, 0);
 var SEGMENTS = 48;
 var AzimuthAngleOverlay = () => {
   const observerPosition = useStore2((state2) => state2.observerPosition);
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
-  const overlay = import_react7.useMemo(() => {
+  const overlay = import_react8.useMemo(() => {
     if (!observerPosition || !selectedFlight)
       return null;
     const observerPoint = gpsToScenePosition(observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude);
@@ -73192,12 +73334,12 @@ var AzimuthAngleOverlay = () => {
 };
 
 // src/components/ConnectionLine.tsx
-var import_react8 = __toESM(require_react(), 1);
+var import_react9 = __toESM(require_react(), 1);
 var jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime(), 1);
 var ConnectionLine = () => {
   const observerPosition = useStore2((state2) => state2.observerPosition);
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
-  const line = import_react8.useMemo(() => {
+  const line = import_react9.useMemo(() => {
     if (observerPosition && selectedFlight) {
       const observerPoint = gpsToScenePosition(observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude);
       const flightPoint = gpsToScenePosition(selectedFlight.latitude, selectedFlight.longitude, selectedFlight.baro_altitude);
@@ -73216,10 +73358,10 @@ var ConnectionLine = () => {
 };
 
 // src/components/EarthCities.tsx
-var import_react9 = __toESM(require_react(), 1);
+var import_react10 = __toESM(require_react(), 1);
 var jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime(), 1);
 var EarthCities = () => {
-  const cities = import_react9.useMemo(() => {
+  const cities = import_react10.useMemo(() => {
     const group = new Group;
     const cityData = [
       { name: "Toulouse", lat: 43.6047, lon: 1.4442 },
@@ -73275,12 +73417,12 @@ var EarthCities = () => {
 };
 
 // src/components/EarthGrid.tsx
-var import_react10 = __toESM(require_react(), 1);
+var import_react11 = __toESM(require_react(), 1);
 var jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime(), 1);
 var EarthGrid = () => {
   const { camera } = useThree();
-  const gridRef = import_react10.useRef(null);
-  import_react10.useEffect(() => {
+  const gridRef = import_react11.useRef(null);
+  import_react11.useEffect(() => {
     if (!gridRef.current)
       return;
     while (gridRef.current.children.length > 0) {
@@ -73332,12 +73474,12 @@ var EarthGrid = () => {
 };
 
 // src/components/ObserverMarker.tsx
-var import_react11 = __toESM(require_react(), 1);
+var import_react12 = __toESM(require_react(), 1);
 var jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime(), 1);
 var ObserverMarker = () => {
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
   const observerPosition = useStore2((state2) => state2.observerPosition);
-  const observerFlightDistance = import_react11.useMemo(() => {
+  const observerFlightDistance = import_react12.useMemo(() => {
     if (observerPosition && selectedFlight) {
       const observerPoint = gpsToScenePosition(observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude);
       const flightPoint = gpsToScenePosition(selectedFlight.latitude, selectedFlight.longitude, selectedFlight.baro_altitude);
@@ -73346,7 +73488,7 @@ var ObserverMarker = () => {
       return trajToFlightVec.length();
     }
   }, [observerPosition, selectedFlight]);
-  const { position, quaternion } = import_react11.useMemo(() => {
+  const { position, quaternion } = import_react12.useMemo(() => {
     if (!observerPosition)
       return { position: null, quaternion: null };
     const radius = 5;
@@ -73396,7 +73538,7 @@ var ObserverMarker = () => {
 };
 
 // src/components/SpinningEarth.tsx
-var import_react13 = __toESM(require_react(), 1);
+var import_react14 = __toESM(require_react(), 1);
 
 // src/utilities/conversions.ts
 var twoPies = Math.PI * 2;
@@ -73405,7 +73547,7 @@ function degToRadian(degrees) {
 }
 
 // src/components/AxesHelper.tsx
-var import_react12 = __toESM(require_react(), 1);
+var import_react13 = __toESM(require_react(), 1);
 
 // node_modules/three/src/math/MathUtils.js
 var DEG2RAD2 = Math.PI / 180;
@@ -73439,7 +73581,7 @@ var Axis = ({ direction, color, label, length }) => {
     dy * length,
     dz * length
   ];
-  const line = import_react12.useMemo(() => {
+  const line = import_react13.useMemo(() => {
     const points = [
       new Vector3(0, 0, 0),
       new Vector3(dx * length, dy * length, dz * length)
@@ -73448,7 +73590,7 @@ var Axis = ({ direction, color, label, length }) => {
     const material = new LineBasicMaterial({ color, linewidth: 2 });
     return new Line(geometry, material);
   }, [dx, dy, dz, length, color]);
-  const coneRotation = import_react12.useMemo(() => {
+  const coneRotation = import_react13.useMemo(() => {
     if (dx === 1) {
       return [0, 0, degToRadian(90)];
     } else if (dx === -1) {
@@ -73464,7 +73606,7 @@ var Axis = ({ direction, color, label, length }) => {
     }
     return [0, 0, 0];
   }, [dx, dy, dz]);
-  const labelPosition = import_react12.useMemo(() => [
+  const labelPosition = import_react13.useMemo(() => [
     dx * (length - 0.8),
     dy * (length - 0.8),
     dz * (length - 0.8)
@@ -73528,7 +73670,7 @@ var Label = ({ position, color, text, rotation }) => {
 // src/components/SpinningEarth.tsx
 var jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime(), 1);
 var SpinningEarth = ({ children }) => {
-  const earthRef = import_react13.useRef(null);
+  const earthRef = import_react14.useRef(null);
   useFrame(() => {
     if (earthRef.current) {}
   });
@@ -73542,7 +73684,7 @@ var SpinningEarth = ({ children }) => {
 };
 
 // src/components/layout/AngleDisplay.tsx
-var import_react14 = __toESM(require_react(), 1);
+var import_react15 = __toESM(require_react(), 1);
 var jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime(), 1);
 var NORTH_POLE2 = new Vector3(0, SCENE_EARTH_RADIUS, 0);
 var formatAngle = (radians) => {
@@ -73552,7 +73694,7 @@ var formatAngle = (radians) => {
 var AngleDisplay = () => {
   const observerPosition = useStore2((state2) => state2.observerPosition);
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
-  const { signedAzimuth, verticalAngle } = import_react14.useMemo(() => {
+  const { signedAzimuth, verticalAngle } = import_react15.useMemo(() => {
     if (!observerPosition || !selectedFlight) {
       return { signedAzimuth: 0, verticalAngle: 0 };
     }
@@ -73601,7 +73743,7 @@ var AngleDisplay = () => {
 };
 
 // src/components/layout/HumidityVisibilityDisplay.tsx
-var import_react15 = __toESM(require_react(), 1);
+var import_react16 = __toESM(require_react(), 1);
 var jsx_dev_runtime12 = __toESM(require_jsx_dev_runtime(), 1);
 var TOULOUSE_VISIBILITY_DATA = {
   January: { humidity_percent: [83, 87], visibility_km: [8, 12] },
@@ -73632,11 +73774,11 @@ var MONTH_NAMES = [
   "December"
 ];
 var HumidityVisibilityDisplay = () => {
-  const currentMonth = import_react15.useMemo(() => {
+  const currentMonth = import_react16.useMemo(() => {
     const date = new Date;
     return MONTH_NAMES[date.getMonth()];
   }, []);
-  const monthData = import_react15.useMemo(() => {
+  const monthData = import_react16.useMemo(() => {
     return TOULOUSE_VISIBILITY_DATA[currentMonth];
   }, [currentMonth]);
   if (!monthData)
@@ -73744,7 +73886,7 @@ var ZoomControl = ({
 // src/components/layout/MainScene.tsx
 var jsx_dev_runtime14 = __toESM(require_jsx_dev_runtime(), 1);
 var GradientBackground = ({ darknessMultiplier }) => {
-  const texture = import_react16.useMemo(() => {
+  const texture = import_react17.useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 2;
     canvas.height = 512;
@@ -73765,7 +73907,7 @@ var GradientBackground = ({ darknessMultiplier }) => {
     texture2.magFilter = LinearFilter;
     return texture2;
   }, [darknessMultiplier]);
-  import_react16.useEffect(() => {
+  import_react17.useEffect(() => {
     return () => {
       texture.dispose();
     };
@@ -73781,13 +73923,13 @@ var MainScene = () => {
   const mode = useStore2((state2) => state2.selectionMode);
   const darkness = useStore2((state2) => state2.darkness);
   const setControls = useStore2((state2) => state2.setControls);
-  const controlsRef = import_react16.useRef(null);
-  import_react16.useEffect(() => {
+  const controlsRef = import_react17.useRef(null);
+  import_react17.useEffect(() => {
     if (controlsRef.current) {
       setControls(controlsRef.current);
     }
   }, [setControls, controlsRef]);
-  import_react16.useEffect(() => {
+  import_react17.useEffect(() => {
     if (controlsRef.current) {
       const timer2 = setTimeout(() => {
         if (mode === "airplane" && selectedFlight) {
@@ -73804,7 +73946,7 @@ var MainScene = () => {
       return () => clearTimeout(timer2);
     }
   }, [controlsRef, observerPosition, selectedFlight, mode]);
-  const cameraDistances = import_react16.useMemo(() => {
+  const cameraDistances = import_react17.useMemo(() => {
     if (observerPosition && !selectedFlight) {
       return { minDistance: 2, maxDistance: 30 };
     }
@@ -73894,11 +74036,18 @@ var MainScene = () => {
 };
 
 // src/App.tsx
-var import_react18 = __toESM(require_react(), 1);
+var import_react19 = __toESM(require_react(), 1);
 
-// src/hooks/useAircraftData.ts
-var import_react17 = __toESM(require_react(), 1);
+// src/contexts/AircraftDataContext.tsx
+var import_react18 = __toESM(require_react(), 1);
+var jsx_dev_runtime15 = __toESM(require_jsx_dev_runtime(), 1);
 var TOKEN_EXPIRY_MINUTES = 30;
+var TOULOUSE_LATMIN = 42.8448;
+var TOULOUSE_LATMAX = 44.1972;
+var TOULOUSE_LONMIN = 0.6213;
+var TOULOUSE_LONMAX = 2.2152;
+var BOUNDING_BOX_HEIGHT = TOULOUSE_LATMAX - TOULOUSE_LATMIN;
+var BOUNDING_BOX_WIDTH = TOULOUSE_LONMAX - TOULOUSE_LONMIN;
 var parseRawState = (state2) => {
   if (Array.isArray(state2)) {
     const [
@@ -73977,12 +74126,6 @@ var fetchAccessToken = async (clientId, clientSecret) => {
   const data = await response.json();
   return data.access_token;
 };
-var TOULOUSE_LATMIN = 42.8448;
-var TOULOUSE_LATMAX = 44.1972;
-var TOULOUSE_LONMIN = 0.6213;
-var TOULOUSE_LONMAX = 2.2152;
-var BOUNDING_BOX_HEIGHT = TOULOUSE_LATMAX - TOULOUSE_LATMIN;
-var BOUNDING_BOX_WIDTH = TOULOUSE_LONMAX - TOULOUSE_LONMIN;
 var fetchAircraftData = async (token, position) => {
   console.log("position", position);
   let latmax = TOULOUSE_LATMAX;
@@ -74012,15 +74155,15 @@ var fetchAircraftData = async (token, position) => {
     return null;
   }
 };
-function useAircraftData(params) {
-  const { observerPosition } = params || {};
-  const [secrets, setSecrets] = import_react17.useState(null);
-  const [secretsError, setSecretsError] = import_react17.useState(null);
-  const [tokenCache, setTokenCache] = import_react17.useState(null);
-  const [formattedAircraftData, setFormattedAircraftData] = import_react17.useState({});
-  const [isLoading, setIsLoading] = import_react17.useState(true);
-  const [error2, setError] = import_react17.useState(null);
-  import_react17.useEffect(() => {
+var AircraftDataContext = import_react18.createContext(undefined);
+var AircraftDataProvider = ({ children }) => {
+  const [secrets, setSecrets] = import_react18.useState(null);
+  const [secretsError, setSecretsError] = import_react18.useState(null);
+  const [tokenCache, setTokenCache] = import_react18.useState(null);
+  const [formattedAircraftData, setFormattedAircraftData] = import_react18.useState({});
+  const [isLoading, setIsLoading] = import_react18.useState(true);
+  const [error2, setError] = import_react18.useState(null);
+  import_react18.useEffect(() => {
     const loadSecrets = async () => {
       try {
         const response = await fetch("/secrets.json?v=" + Date.now());
@@ -74042,7 +74185,7 @@ function useAircraftData(params) {
     };
     loadSecrets();
   }, []);
-  const getToken = import_react17.useCallback(async () => {
+  const getToken = import_react18.useCallback(async () => {
     if (!secrets) {
       throw new Error("Secrets not loaded yet");
     }
@@ -74061,7 +74204,7 @@ function useAircraftData(params) {
     });
     return newToken;
   }, [secrets, tokenCache]);
-  const fetchAndUpdateData = import_react17.useCallback(async (position) => {
+  const fetchAndUpdateData = import_react18.useCallback(async (position) => {
     if (!secrets) {
       setError("Secrets not loaded");
       return;
@@ -74080,46 +74223,63 @@ function useAircraftData(params) {
       setIsLoading(false);
     }
   }, [getToken, secrets]);
-  import_react17.useEffect(() => {
+  import_react18.useEffect(() => {
     if (secrets && !secretsError) {
-      fetchAndUpdateData(observerPosition);
+      fetchAndUpdateData();
     }
   }, [secrets, secretsError, fetchAndUpdateData]);
-  return {
+  const value = {
     token: tokenCache?.access_token ?? null,
     formattedAircraftData,
     isLoading: isLoading || secrets === null,
     error: error2 || secretsError,
     refresh: fetchAndUpdateData
   };
-}
-
+  return /* @__PURE__ */ jsx_dev_runtime15.jsxDEV(AircraftDataContext.Provider, {
+    value,
+    children
+  }, undefined, false, undefined, this);
+};
+var useAircraftData = () => {
+  const context2 = import_react18.useContext(AircraftDataContext);
+  if (context2 === undefined) {
+    throw new Error("useAircraftData must be used within an AircraftDataProvider");
+  }
+  return context2;
+};
 // src/App.tsx
-var jsx_dev_runtime15 = __toESM(require_jsx_dev_runtime(), 1);
-function App() {
+var jsx_dev_runtime16 = __toESM(require_jsx_dev_runtime(), 1);
+function AppContent() {
   const setFlights = useStore2((state2) => state2.setFlights);
   const observerPosition = useStore2((state2) => state2.observerPosition);
-  const { error: aircraftDataError, formattedAircraftData, isLoading: aircraftDataLoading, refresh } = useAircraftData({ observerPosition });
-  import_react18.useEffect(() => {
+  const { error: aircraftDataError, formattedAircraftData, isLoading: aircraftDataLoading, refresh } = useAircraftData();
+  import_react19.useEffect(() => {
     if (!aircraftDataLoading && !aircraftDataError && setFlights) {
       setFlights(formattedAircraftData);
     }
   }, [aircraftDataLoading, formattedAircraftData, aircraftDataError, setFlights]);
-  import_react18.useEffect(() => {
-    refresh(observerPosition);
+  import_react19.useEffect(() => {
+    if (observerPosition) {
+      refresh(observerPosition);
+    }
   }, [observerPosition, refresh]);
-  return /* @__PURE__ */ jsx_dev_runtime15.jsxDEV("div", {
+  return /* @__PURE__ */ jsx_dev_runtime16.jsxDEV("div", {
     className: "grid grid-cols-[10%_90%]",
     children: [
-      /* @__PURE__ */ jsx_dev_runtime15.jsxDEV(Sidebar, {}, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime15.jsxDEV(MainScene, {}, undefined, false, undefined, this)
+      /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(Sidebar, {}, undefined, false, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(MainScene, {}, undefined, false, undefined, this)
     ]
   }, undefined, true, undefined, this);
+}
+function App() {
+  return /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(AircraftDataProvider, {
+    children: /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(AppContent, {}, undefined, false, undefined, this)
+  }, undefined, false, undefined, this);
 }
 var App_default = App;
 
 // src/main.tsx
-var jsx_dev_runtime16 = __toESM(require_jsx_dev_runtime(), 1);
-import_client.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsx_dev_runtime16.jsxDEV(import_react19.StrictMode, {
-  children: /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(App_default, {}, undefined, false, undefined, this)
+var jsx_dev_runtime17 = __toESM(require_jsx_dev_runtime(), 1);
+import_client.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsx_dev_runtime17.jsxDEV(import_react20.StrictMode, {
+  children: /* @__PURE__ */ jsx_dev_runtime17.jsxDEV(App_default, {}, undefined, false, undefined, this)
 }, undefined, false, undefined, this));

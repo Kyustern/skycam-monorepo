@@ -5,6 +5,7 @@ from flask_cors import CORS
 import os
 import threading
 import time
+from services.aircraft_service import aircraft_service
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
@@ -26,7 +27,7 @@ def init_serial():
     """Initialize serial connection to /dev/ttyUSB0."""
     global serial_connection
     serial_port = os.environ.get('SERIAL_PORT', '/dev/ttyUSB0')
-    serial_baud_rate = os.environ.get('SERIAL_BAUDRATE', '9600')
+    serial_rate = os.environ.get('SERIAL_RATE', '9600')
     
     try:
         # Close existing connection if any
@@ -36,10 +37,10 @@ def init_serial():
         # Open new connection
         serial_connection = serial.Serial(
             port=serial_port,
-            baudrate=serial_baud_rate,
+            baudrate=serial_rate,
             timeout=1
         )
-        print(f"[SERIAL] Connected to {serial_port} at 115200 baud")
+        print(f"[SERIAL] Connected to {serial_port} at {serial_rate} baud")
         
         # Start background reader thread
         reader_thread = threading.Thread(target=read_serial, daemon=True)
@@ -84,6 +85,22 @@ def read_serial():
             break
 
 
+def send_serial_command(command_str):
+    """Send a command string to the serial port."""
+    global serial_connection
+    if serial_connection and serial_connection.is_open:
+        try:
+            serial_connection.write(command_str.encode('utf-8') + b'\n')
+            print(f"[SERIAL] Sent: {command_str}")
+            return True
+        except Exception as e:
+            print(f"[SERIAL] Error sending command: {e}")
+            return False
+    else:
+        print("[SERIAL] Error: Serial port not connected")
+        return False
+
+
 # Endpoint to list available serial ports
 @app.route('/api/serial/ports', methods=['GET'])
 def get_serial_ports():
@@ -115,48 +132,131 @@ def get_status():
 
 
 # Endpoint to send turret commands
-@app.route('/api/turret/command', methods=['GET', 'POST'])
+@app.route('/api/turret/command', methods=['POST'])
 def send_command():
-    if request.method == 'POST':
-        data = request.get_json()
-        # TODO: Implement actual command sending to turret
-        # Expected commands: { "action": "move", "azimuth": 45, "elevation": 30 }
-        # or { "action": "fire" }
-        print(f"[SERIAL] Command received: {data}")
-        
-        # Send command to serial port if connected
-        if serial_connection and serial_connection.is_open:
-            try:
-                command_str = str(data)
-                serial_connection.write(command_str.encode('utf-8') + b'\n')
-                print(f"[SERIAL] Sent: {command_str}")
-            except Exception as e:
-                print(f"[SERIAL] Error sending command: {e}")
-                return jsonify({"status": "error", "error": str(e)}), 500
-        
-        return jsonify({"status": "command received", "command": data}), 200
+    data = request.get_json()
+    print("hit")
+    
+    if data is None:
+        return jsonify({"status": "error", "error": "No JSON data provided"}), 400
+    
+    # Check for azimuth and elevation
+    if 'azimuth' not in data or 'elevation' not in data:
+        return jsonify({
+            "status": "error", 
+            "error": "Both 'azimuth' and 'elevation' are required"
+        }), 400
+    
+    try:
+        azimuth = float(data['azimuth'])
+        elevation = float(data['elevation'])
+    except (ValueError, TypeError) as e:
+        return jsonify({
+            "status": "error",
+            "error": f"azimuth and elevation must be valid numbers: {e}"
+        }), 400
+    
+    # Format the command string
+    command_str = f"moveto {azimuth} {elevation}"
+    
+    # Send via serial
+    success = send_serial_command(command_str)
+    
+    if success:
+        return jsonify({
+            "status": "success",
+            "command": command_str,
+            "azimuth": azimuth,
+            "elevation": elevation
+        }), 200
     else:
-        # GET request - return status
-        return jsonify({"status": "ready", "message": "POST to this endpoint to send commands"}), 200
+        return jsonify({
+            "status": "error",
+            "error": "Failed to send command to serial port"
+        }), 500
 
 
 # Endpoint for serial communication with firmware
 @app.route('/api/serial/send', methods=['GET', 'POST'])
 def send_serial():
+    if request.method == 'POST':
         data = request.get_json()
-        serial_port = data.get('port') or os.environ.get('SERIAL_PORT', '/dev/ttyUSB0')
-        # message = data.get('message', '')
-        message = "moveto 90.0 90.0"
-        if serial_connection and serial_connection.is_open:
-            try:
-                if message:
-                    serial_connection.write(message.encode('utf-8') + b'\n')
-                    print(f"[SERIAL] Sent: {message}")
-                return jsonify({"status": "sent to serial", "data": data, "port": serial_connection.port}), 200
-            except Exception as e:
-                return jsonify({"status": "error", "error": str(e), "port": serial_port}), 500
+        message = data.get('message', '') if data else ''
+        
+        if message:
+            success = send_serial_command(message)
+            if success:
+                return jsonify({"status": "sent to serial", "message": message}), 200
+            else:
+                return jsonify({"status": "error", "error": "Serial port not connected"}), 500
         else:
-            return jsonify({"status": "error", "error": "Serial port not connected", "port": serial_port}), 500
+            return jsonify({"status": "error", "error": "No message provided"}), 400
+    else:
+        return jsonify({"status": "ready", "message": "POST to this endpoint to send serial data"}), 200
+
+
+# Aircraft Data API Endpoints
+@app.route('/api/aircraft', methods=['GET'])
+def get_aircraft():
+    """
+    Get aircraft data for the default Toulouse area or a custom bounding box.
+    
+    Query parameters:
+    - lat_min: Minimum latitude (default: 42.8448)
+    - lat_max: Maximum latitude (default: 44.1972)
+    - lon_min: Minimum longitude (default: 0.6213)
+    - lon_max: Maximum longitude (default: 2.2152)
+    """
+    try:
+        lat_min = request.args.get('lat_min', type=float)
+        lat_max = request.args.get('lat_max', type=float)
+        lon_min = request.args.get('lon_min', type=float)
+        lon_max = request.args.get('lon_max', type=float)
+        
+        data = aircraft_service.get_aircraft_in_area(
+            lat_min=lat_min,
+            lat_max=lat_max,
+            lon_min=lon_min,
+            lon_max=lon_max,
+        )
+        
+        return jsonify(data), 200
+        
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route('/api/aircraft/position', methods=['GET'])
+def get_aircraft_by_position():
+    """
+    Get aircraft data around a specific GPS position.
+    
+    Query parameters:
+    - lat: Latitude of center point (required)
+    - lon: Longitude of center point (required)
+    - radius_km: Search radius in kilometers (default: 100)
+    """
+    try:
+        latitude = request.args.get('lat', type=float)
+        longitude = request.args.get('lon', type=float)
+        radius_km = request.args.get('radius_km', default=100.0, type=float)
+        
+        if latitude is None or longitude is None:
+            return jsonify({
+                "status": "error",
+                "error": "lat and lon query parameters are required"
+            }), 400
+        
+        data = aircraft_service.get_aircraft_at_position(
+            latitude=latitude,
+            longitude=longitude,
+            radius_km=radius_km,
+        )
+        
+        return jsonify(data), 200
+        
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 
 # Serve React App - Static files

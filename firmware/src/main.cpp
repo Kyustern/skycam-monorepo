@@ -8,7 +8,7 @@
 
 #define M_MAX_SPEED 500.0
 #define M_SPEED 500.0
-#define M_ACCEL 40.0
+#define M_ACCEL 100.0
 
 // #define YAW_STEP_PIN 15
 #define YAW_STEP_PIN 15
