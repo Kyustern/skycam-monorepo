@@ -2,6 +2,7 @@ import serial
 import serial.tools.list_ports
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import os
 import threading
 import time
@@ -13,10 +14,22 @@ from services.kalman_filter_service import kalman_filter_service
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
+# Initialize SocketIO
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
 # Global serial connection
 serial_connection = None
 reader_thread = None
 shutdown_flag = threading.Event()
+
+# WebSocket heartbeat
+heartbeat_thread = None
+heartbeat_active = False
+connected_clients = set()
+heartbeat_lock = threading.Lock()
+
+# Heartbeat interval (500ms)
+HEARTBEAT_INTERVAL = 0.5
 
 def list_serial_ports():
     """Return a list of available serial ports."""
@@ -137,6 +150,73 @@ def signal_handler(sig, frame):
     print(f"\n[SERIAL] Received signal {sig}, shutting down...")
     cleanup_serial()
     sys.exit(0)
+
+
+def heartbeat_loop():
+    """Background thread that sends heartbeat to all connected WebSocket clients every 500ms."""
+    global heartbeat_active
+    print("[WEBSOCKET] Starting heartbeat loop...")
+    
+    while heartbeat_active:
+        with heartbeat_lock:
+            # Send heartbeat to all connected clients
+            for sid in list(connected_clients):
+                try:
+                    socketio.emit('heartbeat', {'timestamp': time.time()}, room=sid)
+                except Exception as e:
+                    print(f"[WEBSOCKET] Error sending heartbeat to {sid}: {e}")
+                    connected_clients.discard(sid)
+        
+        # Sleep for the heartbeat interval
+        time.sleep(HEARTBEAT_INTERVAL)
+    
+    print("[WEBSOCKET] Heartbeat loop stopped")
+
+
+def start_heartbeat():
+    """Start the heartbeat thread."""
+    global heartbeat_active, heartbeat_thread
+    
+    if heartbeat_active:
+        return
+    
+    heartbeat_active = True
+    heartbeat_thread = threading.Thread(
+        target=heartbeat_loop,
+        daemon=True,
+        name="websocket-heartbeat"
+    )
+    heartbeat_thread.start()
+    print("[WEBSOCKET] Heartbeat started")
+
+
+def stop_heartbeat():
+    """Stop the heartbeat thread."""
+    global heartbeat_active, heartbeat_thread
+    
+    heartbeat_active = False
+    if heartbeat_thread and heartbeat_thread.is_alive():
+        heartbeat_thread.join(timeout=1.0)
+    print("[WEBSOCKET] Heartbeat stopped")
+
+
+# WebSocket event handlers
+@socketio.on('connect')
+def handle_connect():
+    """Handle new WebSocket connection."""
+    with heartbeat_lock:
+        connected_clients.add(request.sid)
+    print(f"[WEBSOCKET] Client connected: {request.sid} (Total: {len(connected_clients)})")
+    emit('connected', {'message': 'Connected to Turret WebSocket server', 'sid': request.sid})
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle WebSocket disconnection."""
+    with heartbeat_lock:
+        connected_clients.discard(request.sid)
+    print(f"[WEBSOCKET] Client disconnected: {request.sid} (Total: {len(connected_clients)})")
+
 
 # Basic health check endpoint
 @app.route('/api/health', methods=['GET'])
@@ -430,12 +510,17 @@ if __name__ == '__main__':
         print("[SERIAL] Warning: No serial ports found!")
     
     try:
+        # Start WebSocket heartbeat
+        print("[WEBSOCKET] Starting heartbeat service...")
+        start_heartbeat()
+        
         # Start Kalman filter service
         print("[KALMAN] Starting Kalman filter service on server startup...")
         kalman_filter_service.start()
         
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        socketio.run(app, host='0.0.0.0', port=5000, debug=True)
     finally:
         # Ensure cleanup on any exit
         cleanup_serial()
         kalman_filter_service.stop()
+        stop_heartbeat()

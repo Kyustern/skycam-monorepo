@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 import type { Flights, FlightState } from '../scripts/scrap-airplane'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
+import { focusCameraOnGPS } from '@/utilities/cameraUtils'
 // import sha256 from 'js-sha256'
+import { getSerialPorts, sendMovetoCommand } from '@/services/serialService';
+import { computeAngles } from '@/utilities';
 
 // In useStore.ts, replace the computeFlightsHash function with:
 
@@ -32,40 +35,6 @@ function computeFlightsHash(flights: Flights | null): string {
 
   return (hash >>> 0).toString(16)
 }
-
-function _computeFlightsHash(flights: Flights | null): string {
-  if (!flights) return ''
-
-  // Custom replacer to preserve full precision for all numbers
-  const replacer = (key: string, value: any): any => {
-    if (typeof value === 'number') {
-      // Use toFixed with enough precision for coordinates/altitude
-      // 10 decimal places handles most GPS precision needs
-      return Number(value.toFixed(10))
-    }
-    return value
-  }
-
-  const str = JSON.stringify(flights, (k, v) => {
-    if (typeof v === 'number') return Number(v.toFixed(10))
-    return v
-  })
-
-  // Simple DJB2 hash algorithm
-  let hash = 5381
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) + str.charCodeAt(i)
-    hash |= 0 // Convert to 32-bit integer
-  }
-
-  return (hash >>> 0).toString(16)
-}
-
-// const computeFlightsHash = (flights: Flights) => {
-//   const hash = sha256(JSON.stringify(flights))
-//   return hash
-// }
-
 
 type Coordinates = Pick<FlightState, "baro_altitude" | "latitude" |"longitude">
 
@@ -99,17 +68,33 @@ export const useStore = create<StoreState>((set, get) => ({
   flightsHash: "",
   setFlights: (newFlights: Flights | null) => {
     const newHash = computeFlightsHash(newFlights)
-    // const currentHash = get().flightsHash
     const currentSelectedFlight = get().selectedFlight
-    console.log('LTES - newFlights', newFlights);
-    console.log('LTES - currentSelectedFlight', currentSelectedFlight);
     const newSelectedFlight = currentSelectedFlight?.callsign ? newFlights[currentSelectedFlight.callsign.trim().toLocaleUpperCase()] : null
-    console.log('LTES - newSelectedFlight', newSelectedFlight);
-    set({ flights: newFlights, flightsHash: newHash, selectedFlight: newSelectedFlight
+
+    // if (newSelectedFlight && observerPosition) {
+    //   const angles = computeAngles(observerPosition, newSelectedFlight)
+    //   console.log('LTES - angles', angles);
+    //   sendMovetoCommand({
+    //     azimuth: angles.signedAzimuth,
+    //     elevation: angles.verticalAngle
+    //   })
+    // }
+    
+    set({
+      flights: newFlights, 
+      flightsHash: newHash, 
+      selectedFlight: newSelectedFlight
      })
   },
   selectedFlight: null,
-  setSelectedFlight: (flight) => set({ selectedFlight: flight }),
+  setSelectedFlight: (newSelectedFlight) => {
+    const cameraControls = get().controls
+    if (cameraControls) {
+      focusCameraOnGPS(cameraControls, newSelectedFlight.latitude, newSelectedFlight.longitude, newSelectedFlight.baro_altitude/1000)
+
+    }
+    set({ selectedFlight: newSelectedFlight })
+  },
   selectionMode: null,
   setSelectionMode: (mode) => set({ selectionMode: mode }),
   darkness: 0.5,

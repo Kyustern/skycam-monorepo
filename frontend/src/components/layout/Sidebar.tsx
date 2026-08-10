@@ -17,19 +17,8 @@ export const Sidebar = ({ controlsRef }: SidebarProps) => {
   const setDarkness = useStore(state => state.setDarkness)
   const setSelectionMode = useStore(state => state.setSelectionMode)
   const setSelectedFlight = useStore(state => state.setSelectedFlight)
+  const selectedFlight = useStore(state => state.selectedFlight)
   const flights = useStore(state => state.flights)
-
-  const handleFocusPosition = () => {
-    if (controlsRef?.current && observerPosition) {
-      const targetPosition = focusCameraOnGPS(
-        controlsRef.current,
-        observerPosition.latitude,
-        observerPosition.longitude,
-        observerPosition.baro_altitude
-      )
-      animateCameraFocus(controlsRef.current, targetPosition)
-    }
-  }
 
   // Apply dark theme class to body
   useEffect(() => {
@@ -67,10 +56,9 @@ export const Sidebar = ({ controlsRef }: SidebarProps) => {
         />
       </div>
 
-      <ObserverPositionForm onFocusPosition={handleFocusPosition} />
+      <ObserverPositionForm />
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-2">Flights</h2>
         
         {(!flights) ? (
           <div className="flex items-center justify-center py-4">
@@ -78,6 +66,21 @@ export const Sidebar = ({ controlsRef }: SidebarProps) => {
             <span className="ml-2">Loading flights...</span>
           </div>
         ) : (
+          <>
+          {selectedFlight ? (
+            <>
+            <h2>
+              {selectedFlight.callsign}
+            </h2>
+            <div className="text-sm text-gray-400">{selectedFlight.latitude.toFixed(4)}°N, {selectedFlight.longitude.toFixed(4)}°E</div>
+            <div>
+              {selectedFlight.baro_altitude_km.toFixed(3)} km
+            </div>
+
+            </>
+          ) : (
+            <h2>Select a flight to start</h2>
+          )}
           <div className="space-y-2 overflow-y-auto max-h-[50vh] sidebar-accent rounded-lg p-2">
             {Object.values(flights).map((flight) => (
               <button
@@ -86,12 +89,13 @@ export const Sidebar = ({ controlsRef }: SidebarProps) => {
                 className="w-full text-left p-2 rounded flight-item hover:bg-sidebar-primary hover:bg-opacity-20 transition-colors"
               >
                 <div className="font-medium">{flight.callsign.trim()}</div>
-                <div className="text-sm text-gray-400">{flight.latitude.toFixed(4)}°N, {flight.longitude.toFixed(4)}°E</div>
                 <div className="text-xs text-gray-500">Alt: {Math.round(flight.baro_altitude)}m</div>
               </button>
             ))}
           </div>
+          </>
         )}
+
       </div>
     </div>
   )

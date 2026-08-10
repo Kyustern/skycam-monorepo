@@ -1,15 +1,7 @@
 import { useMemo } from 'react'
-import * as THREE from 'three'
 import { useStore } from '../../store/useStore'
-import { gpsToScenePosition } from '../../utilities/cameraUtils'
-import { SCENE_EARTH_RADIUS } from '../../utilities/unitConversions'
-
-const NORTH_POLE = new THREE.Vector3(0, SCENE_EARTH_RADIUS, 0)
-
-const formatAngle = (radians: number) => {
-  const degrees = THREE.MathUtils.radToDeg(radians)
-  return `${degrees > 0 ? '+' : ''}${degrees.toFixed(1)}°`
-}
+import { computeAngles, formatAngle } from '../../utilities/angleUtils'
+import { sendMovetoCommand } from '@/services/serialService'
 
 export const AngleDisplay = () => {
   const observerPosition = useStore(state => state.observerPosition)
@@ -19,33 +11,15 @@ export const AngleDisplay = () => {
     if (!observerPosition || !selectedFlight) {
       return { signedAzimuth: 0, verticalAngle: 0 }
     }
-
-    const observerPoint = gpsToScenePosition(
-      observerPosition.latitude,
-      observerPosition.longitude,
-      observerPosition.baro_altitude
-    )
-    const flightPoint = gpsToScenePosition(
-      selectedFlight.latitude,
-      selectedFlight.longitude,
-      selectedFlight.baro_altitude
-    )
-
-    const up = observerPoint.clone().normalize()
-    const north = NORTH_POLE.clone().sub(up.clone().multiplyScalar(NORTH_POLE.dot(up))).normalize()
-    const east = new THREE.Vector3().crossVectors(north, up).normalize()
-    const toFlight = flightPoint.clone().sub(observerPoint)
-
-    const horizontalFlightDirection = toFlight.clone().sub(up.clone().multiplyScalar(toFlight.dot(up))).normalize()
-
-    const azimuth = Math.atan2(
-      horizontalFlightDirection.dot(east),
-      horizontalFlightDirection.dot(north)
-    )
-    const vertical = Math.asin(toFlight.clone().normalize().dot(up))
-
-    return { signedAzimuth: azimuth, verticalAngle: vertical }
-  }, [observerPosition, selectedFlight])
+    const angles = computeAngles(observerPosition, selectedFlight)
+    const formatedAngles = {
+      signedAzimuth: formatAngle(angles.signedAzimuth),
+      verticalAngle: formatAngle(angles.verticalAngle)
+    }
+    console.log('LTES - selectedFlight', selectedFlight);
+    sendMovetoCommand({ azimuth: parseFloat(formatedAngles.signedAzimuth), elevation: parseFloat(formatedAngles.verticalAngle) })
+    return formatedAngles
+  }, [selectedFlight])
 
   if (!observerPosition || !selectedFlight) return null
 
@@ -53,11 +27,11 @@ export const AngleDisplay = () => {
     <div className="bg-black/70 text-white p-2 rounded text-xs font-mono">
       <div>
         <span style={{ color: '#facc15' }}>Azimuth: </span>
-        <span style={{ color: '#facc15' }}>{formatAngle(signedAzimuth)}</span>
+        <span style={{ color: '#facc15' }}>{signedAzimuth}</span>
       </div>
       <div>
         <span style={{ color: '#38bdf8' }}>Vertical: </span>
-        <span style={{ color: '#38bdf8' }}>{formatAngle(verticalAngle)}</span>
+        <span style={{ color: '#38bdf8' }}>{verticalAngle}</span>
       </div>
     </div>
   )

@@ -13,7 +13,6 @@ import { SpinningEarth } from "../SpinningEarth"
 import { AngleDisplay } from "../layout/AngleDisplay"
 import { HumidityVisibilityDisplay } from "../layout/HumidityVisibilityDisplay"
 import { ZoomControl } from "../layout/ZoomControl"
-import { focusCameraOnGPS, animateCameraFocus } from '../../utilities/cameraUtils'
 import * as THREE from 'three'
 import { kmToSceneUnits } from "@/utilities/unitConversions"
 // extend({ ZoomControl })
@@ -59,9 +58,6 @@ type MainSceneProps = {
 }
 
 export const MainScene = ({ controlsRef }: MainSceneProps) => {
-    const observerPosition = useStore(state => state.observerPosition)
-    const selectedFlight = useStore(state => state.selectedFlight)
-    const mode = useStore(state => state.selectionMode)
     const darkness = useStore(state => state.darkness)
     const setControls = useStore(state => state.setControls)
 
@@ -70,46 +66,17 @@ export const MainScene = ({ controlsRef }: MainSceneProps) => {
             setControls(controlsRef.current)
         }
     },
-    [setControls, controlsRef])
+    [setControls, controlsRef, controlsRef.current])
     // Set default position to Toulouse
     // useEffect(() => {
     //     setObserverPosition({ latitude: 43.6047, longitude: 1.4442, baro_altitude: 150 })
     // }, [setObserverPosition])
 
     // Auto-focus camera based on selected flight only (not observer position)
-    useEffect(() => {
-        if (controlsRef.current) {
-            // const timer = setTimeout(() => {
-            //     if (mode === 'airplane' && selectedFlight) {
-            //         console.log("mode === 'airplane' && selectedFlight", mode === 'airplane' && selectedFlight);
-            //         console.log("asassas")
-            //         // Focus on selected flight with smooth animation
-            //         animateCameraFocus(
-            //             controlsRef.current,
-            //             focusCameraOnGPS(controlsRef.current, selectedFlight.latitude, selectedFlight.longitude, observerPosition?.baro_altitude || 0)
-            //         )
-            //     } else if (!observerPosition && !selectedFlight) {
-            //         console.log("default")
-
-            //         // Default focus on Earth center
-            //         animateCameraFocus(controlsRef.current, new THREE.Vector3(0, 0, 0))
-            //     }
-            // }, 500)
-            // return () => clearTimeout(timer)
-        }
-    }, [controlsRef, observerPosition, selectedFlight, mode])
 
     const cameraDistances: { minDistance: number, maxDistance: number } = useMemo(() => {
-        if (observerPosition && !selectedFlight) {
-            return { minDistance: 2, maxDistance: 30 }
-        }
-        if (observerPosition && selectedFlight) {
-            return { minDistance: kmToSceneUnits(1), maxDistance: 2 }
-        } else {
-            return { minDistance: 10, maxDistance: 30 }
-
-        }
-    }, [observerPosition, selectedFlight])
+        return { minDistance: kmToSceneUnits(1), maxDistance: 2 }
+    }, [])
 
     return (
         <div className="h-full relative">
@@ -148,7 +115,7 @@ export const MainScene = ({ controlsRef }: MainSceneProps) => {
                 <OrbitControls
                     ref={controlsRef}
                     enableDamping
-                    dampingFactor={0.010}
+                    dampingFactor={0.060}
                     minDistance={cameraDistances.minDistance}
                     maxDistance={cameraDistances.maxDistance}
                 />

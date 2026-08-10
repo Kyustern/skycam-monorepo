@@ -73,6 +73,8 @@ enum DIRECTION
 
 OperationState operationState = OperationState::OP_IDLE;
 HomingState homingState = IDLE;
+unsigned long lastLedToggle = 0;
+bool ledState = LOW;
 
 int getSafePosition(int target) {
   int abs_target = abs(target);
@@ -98,7 +100,7 @@ void setMotorsEn(MotorsEnableState desiredState)
         break;
     case MOT_DISABLED:
         Serial.println("Motors disabled");
-        digitalWrite(XYE_ENABLE, LOW);
+        digitalWrite(XYE_ENABLE, HIGH);
         break;
 
     default:
@@ -167,11 +169,20 @@ void moveToPosition(float yawAngle, float pitchAngle) {
 
 void setup()
 {
-    Serial.begin(9600);
-    Serial.println("Controller start");
-
-    // initialize digital pin LED_BUILTIN as an output.
+    // Initialize LED first for status indication
     pinMode(_LED_BUILTIN_, OUTPUT);
+    
+    // Blink LED during setup to indicate initialization
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(_LED_BUILTIN_, HIGH);
+        delay(100);
+        digitalWrite(_LED_BUILTIN_, LOW);
+        delay(100);
+    }
+    
+    Serial.begin(9600);
+    delay(100);  // Allow serial to initialize
+    Serial.println("Controller start");
     pinMode(YAW_LIMIT_PIN, INPUT_PULLUP);
     pinMode(PITCH_LIMIT_PIN, INPUT_PULLUP);
     pinMode(XYE_ENABLE, OUTPUT);
@@ -264,6 +275,13 @@ void loop()
     }
     YAW_STEPPER.run();
     PITCH_STEPPER.run();
+
+    // Non-blocking LED blink at 2Hz (toggle every 250ms)
+    if (millis() - lastLedToggle >= 500) {
+        lastLedToggle = millis();
+        ledState = !ledState;
+        digitalWrite(_LED_BUILTIN_, ledState);
+    }
 
     if (YAW_STEPPER.distanceToGo() == 0 && PITCH_STEPPER.distanceToGo() == 0) {
 

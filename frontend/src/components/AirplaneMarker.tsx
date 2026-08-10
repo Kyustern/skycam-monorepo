@@ -45,12 +45,12 @@ export const AirplaneMarker = () => {
     //   flightPos.clone().normalize().multiplyScalar(textOffset)
     // )
 
-    if (flight.callsign === selectedFlight?.callsign && controls) {
-      animateCameraFocus(
-        controls,
-        textPos
-      )
-    }
+    // if (flight.callsign === selectedFlight?.callsign && controls) {
+    //   animateCameraFocus(
+    //     controls,
+    //     textPos
+    //   )
+    // }
 
     const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), textPos])
     const material = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 })

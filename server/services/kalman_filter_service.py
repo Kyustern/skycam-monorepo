@@ -107,6 +107,11 @@ class FlightTrack:
             self.Q = np.eye(6)
         if self.R.size == 0:
             self.R = np.eye(3)
+        
+        # Ensure state_vector is always float64 (not object dtype with None values)
+        if self.state_vector.dtype == object:
+            # Replace None values with 0.0
+            self.state_vector = np.array([float(x) if x is not None else 0.0 for x in self.state_vector], dtype=np.float64)
 
 
 class KalmanFilterService:
@@ -176,6 +181,19 @@ class KalmanFilterService:
     def _get_current_time(self) -> float:
         """Get current timestamp."""
         return time.time()
+    
+    def _get_float(self, value, default: float = 0.0) -> float:
+        """
+        Safely extract a float value, returning default if value is None.
+        
+        Args:
+            value: The value to convert
+            default: Default value if value is None
+            
+        Returns:
+            Float value (or default if None)
+        """
+        return default if value is None else float(value)
 
     def _degrees_to_meters(self, lat: float, delta_lat: float, delta_lon: float) -> Tuple[float, float]:
         """
@@ -234,10 +252,10 @@ class KalmanFilterService:
         icao = flight_data.get("icao", "")
         origin_country = flight_data.get("origin_country", "")
         
-        # Get initial position
-        lat = flight_data.get("latitude", 0.0)
-        lon = flight_data.get("longitude", 0.0)
-        alt = flight_data.get("baro_altitude", 0.0)  # in meters
+        # Get initial position (handle None values from API)
+        lat = self._get_float(flight_data.get("latitude"), 0.0)
+        lon = self._get_float(flight_data.get("longitude"), 0.0)
+        alt = self._get_float(flight_data.get("baro_altitude"), 0.0)  # in meters
         
         # Use initial position as reference point
         ref_lat = lat
@@ -257,15 +275,15 @@ class KalmanFilterService:
         )
         
         # Velocity in m/s (assuming velocity is in m/s from OpenSky)
-        velocity = flight_data.get("velocity", 0.0)
+        velocity = self._get_float(flight_data.get("velocity"), 0.0)
         
         # Convert velocity and heading to north/east components
-        true_track = flight_data.get("true_track", 0.0)  # in degrees, 0 = north
+        true_track = self._get_float(flight_data.get("true_track"), 0.0)  # in degrees, 0 = north
         velocity_north = velocity * math.cos(math.radians(true_track))
         velocity_east = velocity * math.sin(math.radians(true_track))
         
         # Vertical rate (assuming in m/s, positive = climbing)
-        vertical_rate = flight_data.get("vertical_rate", 0.0)
+        vertical_rate = self._get_float(flight_data.get("vertical_rate"), 0.0)
         
         # Initial state: [north, east, alt, v_north, v_east, v_alt]
         # All positions in meters relative to reference point
@@ -373,9 +391,9 @@ class KalmanFilterService:
             return False
         
         # Measurement vector: [north, east, alt] in meters relative to track's reference point
-        lat_meas = flight_data.get("latitude", 0.0)
-        lon_meas = flight_data.get("longitude", 0.0)
-        alt_meas = flight_data.get("baro_altitude", 0.0)
+        lat_meas = self._get_float(flight_data.get("latitude"), 0.0)
+        lon_meas = self._get_float(flight_data.get("longitude"), 0.0)
+        alt_meas = self._get_float(flight_data.get("baro_altitude"), 0.0)
         
         # Convert lat/lon to meters relative to track's reference point
         north_meas, east_meas = self._degrees_to_meters(
@@ -449,6 +467,10 @@ class KalmanFilterService:
         
         # Clamp dt to not go backwards in time
         dt = max(dt, 0)
+        
+        # Ensure state_vector is float64 (safeguard against None values)
+        if track.state_vector.dtype == object:
+            track.state_vector = np.array([float(x) if x is not None else 0.0 for x in track.state_vector], dtype=np.float64)
         
         # State transition matrix F (constant velocity model)
         # F = [1 0 0 dt 0  0 ]  # north += v_north * dt
@@ -545,6 +567,7 @@ class KalmanFilterService:
             except Exception as e:
                 # Skip tracks that fail to predict
                 print(f"[KALMAN] Error predicting for {callsign}: {e}")
+                print(track)
                 
         return predictions
 

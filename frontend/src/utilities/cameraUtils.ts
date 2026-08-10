@@ -45,9 +45,7 @@ export function focusCameraOnGPS(
   lon: number,
   alt: number = 5
 ) {
-  // console.log("radius", alt);
-  // console.log("lon", lon);
-  // console.log("lat", lat);
+
   const targetPosition = gpsToScenePosition(lat, lon, alt)
   if (controls) {
     controls.target.copy(targetPosition)
