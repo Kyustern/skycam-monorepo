@@ -15,7 +15,7 @@ app = Flask(__name__, static_folder='static')
 CORS(app)
 
 # Initialize SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Global serial connection
 serial_connection = None

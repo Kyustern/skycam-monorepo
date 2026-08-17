@@ -28,7 +28,7 @@ class AircraftService:
     
     def _load_secrets(self) -> Dict[str, Any]:
         """Load secrets from secrets.json file."""
-        secrets_path = os.path.join("./secrets.json")
+        secrets_path = os.path.join("../secrets.json")
         
         if not os.path.exists(secrets_path):
             # Try alternative path
