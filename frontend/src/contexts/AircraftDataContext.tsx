@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from "react";
 
 // Re-export types for consistency
 export type FlightState = {
@@ -150,6 +150,9 @@ const fetchAircraftDataFromServer = async (
     }
 };
 
+// WebSocket ready states
+type WebSocketReadyState = 'connecting' | 'open' | 'closed' | 'error';
+
 // Context type definition
 interface AircraftDataContextType {
     token: string | null;
@@ -157,6 +160,8 @@ interface AircraftDataContextType {
     isLoading: boolean;
     error: string | null;
     refresh: (position?: { latitude: number; longitude: number }) => Promise<void>;
+    wsReadyState: WebSocketReadyState;
+    reconnect: () => void;
 }
 
 // Create the context with default values
@@ -167,11 +172,78 @@ interface AircraftDataProviderProps {
     children: ReactNode;
 }
 
+// WebSocket endpoint - use relative path for Vite proxy
+const WS_BASE = "/ws";
+
 // Provider component
 export const AircraftDataProvider = ({ children }: AircraftDataProviderProps) => {
     const [formattedAircraftData, setFormattedAircraftData] = useState<Flights>({});
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [wsReadyState, setWsReadyState] = useState<WebSocketReadyState>('closed');
+
+    // Store WebSocket instance in a ref
+    const wsRef = useRef<WebSocket | null>(null);
+    const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Handle incoming WebSocket messages
+    const handleWebSocketMessage = useCallback((event: MessageEvent) => {
+        try {
+            const data: ADSBResponse = JSON.parse(event.data);
+            const formattedData = formatAircraftData(data);
+            setFormattedAircraftData(prev => ({ ...prev, ...formattedData }));
+        } catch (err) {
+            console.error("Error parsing WebSocket message:", err);
+            setError("Failed to parse WebSocket data");
+        }
+    }, []);
+
+    // Reconnection logic with exponential backoff
+    const reconnect = useCallback(() => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            return;
+        }
+
+        // Clear any existing reconnection timeout
+        if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+        }
+
+        setWsReadyState('connecting');
+
+        try {
+            const wsUrl = `${WS_BASE}/aircraft`;
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                setWsReadyState('open');
+                setError(null);
+                console.log('WebSocket connected');
+            };
+
+            ws.onclose = () => {
+                setWsReadyState('closed');
+                console.log('WebSocket disconnected');
+                // Attempt to reconnect after delay
+                reconnectTimeoutRef.current = setTimeout(() => {
+                    reconnect();
+                }, 5000); // 5 second delay before reconnect
+            };
+
+            ws.onerror = () => {
+                setWsReadyState('error');
+                setError("WebSocket connection error");
+            };
+
+            ws.onmessage = handleWebSocketMessage;
+
+            wsRef.current = ws;
+        } catch (err) {
+            console.error("Failed to create WebSocket connection:", err);
+            setWsReadyState('error');
+            setError("Failed to create WebSocket connection");
+        }
+    }, [handleWebSocketMessage]);
 
     const fetchAndUpdateData = useCallback(
         async (position?: { latitude: number; longitude: number }) => {
@@ -192,17 +264,34 @@ export const AircraftDataProvider = ({ children }: AircraftDataProviderProps) =>
         []
     );
 
-    // Initial data fetch on mount
+    // Initialize WebSocket connection on mount
     useEffect(() => {
+        // Fetch initial data via REST API
         fetchAndUpdateData();
-    }, [fetchAndUpdateData]);
+        
+        // Connect WebSocket for real-time updates
+        reconnect();
+
+        return () => {
+            // Cleanup WebSocket connection
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+            }
+            if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+            }
+        };
+    }, [fetchAndUpdateData, reconnect]);
 
     const value: AircraftDataContextType = {
-        token: null, // Token is now managed server-side
+        token: null,
         formattedAircraftData,
         isLoading,
         error,
         refresh: fetchAndUpdateData,
+        wsReadyState,
+        reconnect,
     };
 
     return (
