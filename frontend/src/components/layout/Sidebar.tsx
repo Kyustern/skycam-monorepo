@@ -12,6 +12,8 @@ type SidebarProps = {
 
 export const Sidebar = ({ controlsRef }: SidebarProps) => {
   const observerPosition = useStore(state => state.observerPosition)
+  const searchRadius = useStore(state => state.searchRadius)
+  const setSearchRadius = useStore(state => state.setSearchRadius)
   const [darkTheme, setDarkTheme] = useState(false)
   const darkness = useStore(state => state.darkness)
   const setDarkness = useStore(state => state.setDarkness)
@@ -57,6 +59,23 @@ export const Sidebar = ({ controlsRef }: SidebarProps) => {
       </div>
 
       <ObserverPositionForm />
+      
+      <div className="mt-6">
+        <label className="block text-sm font-medium mb-2">Search Radius: {searchRadius} km</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={searchRadius}
+          onChange={(e) => setSearchRadius(parseFloat(e.target.value))}
+          className="w-full h-2 bg-sidebar-accent rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between text-xs text-sidebar-foreground/60 mt-1">
+          <span>1 km</span>
+          <span>100 km</span>
+        </div>
+      </div>
 
       <div className="mt-8">
         

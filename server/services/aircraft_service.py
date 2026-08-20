@@ -10,25 +10,56 @@ import time
 from typing import Optional, Dict, Any, List
 import requests
 
+from utils.logger import aircraft_logger
+
+def log_current_path():
+    """Utility function to log the current working directory and its contents."""
+    aircraft_logger.debug(f"Current working directory: {os.getcwd()}")
+    aircraft_logger.debug("Directory contents:")
+    try:
+        for item in os.listdir('.'):
+            if os.path.isfile(item):
+                aircraft_logger.debug(f"  FILE: {item}")
+            elif os.path.isdir(item):
+                aircraft_logger.debug(f"  DIR: {item}/")
+    except Exception as e:
+        aircraft_logger.debug(f"  Error listing directory: {e}")
+
 
 class AircraftService:
     """Service for fetching aircraft data from OpenSky Network."""
     
-    # Toulouse bounding box (default area)
-    DEFAULT_LAT_MIN = 42.8448
-    DEFAULT_LAT_MAX = 44.1972
-    DEFAULT_LON_MIN = 0.6213
-    DEFAULT_LON_MAX = 2.2152
-    
     def __init__(self):
         """Initialize the service by loading secrets from file."""
         self._secrets = self._load_secrets()
+        aircraft_logger.debug(f"Loaded secrets: {self._secrets}")
         self._token_cache: Dict[str, Any] = {}
         self._token_expiry_seconds = 30 * 60  # 30 minutes
+
+        # Compute bounding box dynamically from DEFAULT_LOCATION
+        # with a 1.5 degree range centered on the location
+        default_loc = self._secrets.get("DEFAULT_LOCATION", {})
+        center_lat = default_loc.get("latitude", 41.6)
+        center_lon = default_loc.get("longitude", 2.7)
+        half_range = 1.5 / 2  # 0.75 degrees
+
+        self.DEFAULT_LAT_MIN = center_lat - half_range
+        self.DEFAULT_LAT_MAX = center_lat + half_range
+        self.DEFAULT_LON_MIN = center_lon - half_range
+        self.DEFAULT_LON_MAX = center_lon + half_range
+
+        # Initialize last_position with DEFAULT_LOCATION
+        self.last_position = {
+            "latitude": center_lat,
+            "longitude": center_lon,
+            "radius_km": 100.0,
+        }
     
     def _load_secrets(self) -> Dict[str, Any]:
         """Load secrets from secrets.json file."""
-        secrets_path = os.path.join("../secrets.json")
+        # log_current_path()
+        
+        secrets_path = os.path.join("./secrets.json")
         
         if not os.path.exists(secrets_path):
             # Try alternative path
@@ -142,7 +173,7 @@ class AircraftService:
         self,
         latitude: float,
         longitude: float,
-        radius_km: float = 100.0,
+        radius_km: float,
     ) -> Dict[str, Any]:
         """
         Fetch aircraft data around a specific position.
@@ -157,18 +188,49 @@ class AircraftService:
         
         Returns:
             Dictionary with aircraft data
+        
+        Raises:
+            ValueError: If latitude, longitude, or radius_km is None or missing
         """
+        if latitude is None or longitude is None or radius_km is None:
+            raise ValueError("get_aircraft_at_position : Missing parameters")
+
+        
         # Approximate degrees from km (1 degree latitude ~ 111 km)
         lat_delta = radius_km / 111.0
         # Longitude delta depends on latitude (1 degree ~ 111 km * cos(latitude))
         lon_delta = radius_km / (111.0 * max(0.001, abs(math.cos(math.radians(latitude)))))
         
+        # Update last_position
+        self.last_position = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "radius_km": radius_km,
+        }
+
         lat_min = latitude - lat_delta
         lat_max = latitude + lat_delta
         lon_min = longitude - lon_delta
         lon_max = longitude + lon_delta
         
         return self.get_aircraft_in_area(lat_min, lat_max, lon_min, lon_max)
+
+    def get_aircraft_at_last_pos(self, radius_km: Optional[float] = None) -> Dict[str, Any]:
+        """
+        Fetch aircraft data around the last position.
+        
+        Args:
+            radius_km: Optional search radius override in kilometers.
+                     If not provided, uses the radius from last_position.
+        
+        Returns:
+            Dictionary with aircraft data
+        """
+        lat = self.last_position["latitude"]
+        lon = self.last_position["longitude"]
+        radius = radius_km if radius_km is not None else self.last_position["radius_km"]
+        
+        return self.get_aircraft_at_position(lat, lon, radius)
 
 
 # Global service instance

@@ -1,4 +1,6 @@
+import { Coordinates } from "@/store/useStore";
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from "react";
+import { io, Socket } from "socket.io-client";
 
 // Re-export types for consistency
 export type FlightState = {
@@ -31,11 +33,6 @@ type ADSBResponse = {
     time: number;
     states: RawState[] | null;
 };
-
-const TOULOUSE_LATMIN = 42.8448;
-const TOULOUSE_LATMAX = 44.1972;
-const TOULOUSE_LONMIN = 0.6213;
-const TOULOUSE_LONMAX = 2.2152;
 
 const parseRawState = (state: RawState): FlightState | null => {
     if (Array.isArray(state)) {
@@ -109,49 +106,43 @@ const API_BASE = "/api";
 
 // Fetch aircraft data from the server API
 const fetchAircraftDataFromServer = async (
-    position?: { latitude: number; longitude: number }
+    params?: {
+        observer_position: Coordinates,
+        radius: number
+    }
 ): Promise<ADSBResponse | null> => {
     try {
-        let url = `${API_BASE}/aircraft`;
-        
-        const params = new URLSearchParams();
-        
-        if (position) {
-            // Use position-based search with radius
-            params.append("lat", position.latitude.toString());
-            params.append("lon", position.longitude.toString());
-            params.append("radius_km", "100");  // 100km radius
-            url = `${API_BASE}/aircraft/position`;
-        } else {
-            // Use default Toulouse bounding box
-            params.append("lat_min", TOULOUSE_LATMIN.toString());
-            params.append("lat_max", TOULOUSE_LATMAX.toString());
-            params.append("lon_min", TOULOUSE_LONMIN.toString());
-            params.append("lon_max", TOULOUSE_LONMAX.toString());
+        const url = `${API_BASE}/aircraft/position`;
+
+        if (params?.observer_position) {
+            // Use position-based search with POST request
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    lat: params.observer_position.latitude,
+                    lon: params.observer_position.longitude,
+                    radius_km: params.radius || 100
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data: ADSBResponse = await response.json();
+            return data;
         }
-        
-        const fullUrl = `${url}?${params.toString()}`;
-        
-        const response = await fetch(fullUrl, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data: ADSBResponse = await response.json();
-        return data;
     } catch (error) {
         console.error("Error fetching aircraft data from server:", error);
         return null;
     }
 };
 
-// WebSocket ready states
-type WebSocketReadyState = 'connecting' | 'open' | 'closed' | 'error';
+// Socket.IO connection states
+type SocketIOReadyState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 // Context type definition
 interface AircraftDataContextType {
@@ -159,8 +150,11 @@ interface AircraftDataContextType {
     formattedAircraftData: Flights;
     isLoading: boolean;
     error: string | null;
-    refresh: (position?: { latitude: number; longitude: number }) => Promise<void>;
-    wsReadyState: WebSocketReadyState;
+    refresh: (params: {
+        observer_position: Coordinates,
+        radius: number
+    }) => Promise<void>;
+    socketReadyState: SocketIOReadyState;
     reconnect: () => void;
 }
 
@@ -172,35 +166,34 @@ interface AircraftDataProviderProps {
     children: ReactNode;
 }
 
-// WebSocket endpoint - use relative path for Vite proxy
-const WS_BASE = "/ws";
+// Socket.IO endpoint - use relative path for Vite proxy
+const SOCKET_IO_PATH = "/api/ws";
 
 // Provider component
 export const AircraftDataProvider = ({ children }: AircraftDataProviderProps) => {
     const [formattedAircraftData, setFormattedAircraftData] = useState<Flights>({});
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [wsReadyState, setWsReadyState] = useState<WebSocketReadyState>('closed');
+    const [socketReadyState, setSocketReadyState] = useState<SocketIOReadyState>('disconnected');
 
-    // Store WebSocket instance in a ref
-    const wsRef = useRef<WebSocket | null>(null);
+    // Store Socket.IO instance in a ref
+    const socketRef = useRef<Socket | null>(null);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Handle incoming WebSocket messages
-    const handleWebSocketMessage = useCallback((event: MessageEvent) => {
+    // Handle incoming Socket.IO messages
+    const handleSocketMessage = useCallback((data: ADSBResponse) => {
         try {
-            const data: ADSBResponse = JSON.parse(event.data);
             const formattedData = formatAircraftData(data);
             setFormattedAircraftData(prev => ({ ...prev, ...formattedData }));
         } catch (err) {
-            console.error("Error parsing WebSocket message:", err);
-            setError("Failed to parse WebSocket data");
+            console.error("Error parsing Socket.IO message:", err);
+            setError("Failed to parse Socket.IO data");
         }
     }, []);
 
     // Reconnection logic with exponential backoff
     const reconnect = useCallback(() => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        if (socketRef.current && socketRef.current.connected) {
             return;
         }
 
@@ -209,49 +202,73 @@ export const AircraftDataProvider = ({ children }: AircraftDataProviderProps) =>
             clearTimeout(reconnectTimeoutRef.current);
         }
 
-        setWsReadyState('connecting');
+        setSocketReadyState('connecting');
+        setError(null);
 
         try {
-            const wsUrl = `${WS_BASE}/aircraft`;
-            const ws = new WebSocket(wsUrl);
+            // Disconnect existing socket if present
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+            }
 
-            ws.onopen = () => {
-                setWsReadyState('open');
-                setError(null);
-                console.log('WebSocket connected');
-            };
+            const socket = io("", {
+                path: SOCKET_IO_PATH,
+                reconnection: true,        // Let Socket.IO handle reconnects
+                reconnectionAttempts: 10,  // Retry up to 10 times
+                reconnectionDelay: 1000,  // Start with 1s, then exponential backoff
+                timeout: 20000            // Wait 20s before considering disconnected
+            });
 
-            ws.onclose = () => {
-                setWsReadyState('closed');
-                console.log('WebSocket disconnected');
+            socket.on("connect", () => {
+                setSocketReadyState('connected');
+                console.log('Socket.IO connected at ');
+                console.log(Date.now())
+            });
+
+            socket.on("disconnect", () => {
+                setSocketReadyState('disconnected');
+                console.log('Socket.IO disconnected');
+                console.log(Date.now())
                 // Attempt to reconnect after delay
-                reconnectTimeoutRef.current = setTimeout(() => {
-                    reconnect();
-                }, 5000); // 5 second delay before reconnect
-            };
+                // reconnectTimeoutRef.current = setTimeout(() => {
+                //     reconnect();
+                // }, 5000); // 5 second delay before reconnect
+            });
 
-            ws.onerror = () => {
-                setWsReadyState('error');
-                setError("WebSocket connection error");
-            };
 
-            ws.onmessage = handleWebSocketMessage;
+            socket.on("connect_error", (err) => {
+                setSocketReadyState('error');
+                setError("Socket.IO connection error");
+                console.error("Socket.IO connection error:", err);
+            });
 
-            wsRef.current = ws;
+            socket.on("aircraft_data", (_aircraft_data) => {
+                const aircraft_data = _aircraft_data as unknown as Flights
+            });
+            socket.on("heartbeat_predictions", () => {
+                console.log("heartbeat")
+
+            });
+
+            socketRef.current = socket;
         } catch (err) {
-            console.error("Failed to create WebSocket connection:", err);
-            setWsReadyState('error');
-            setError("Failed to create WebSocket connection");
+            console.error("Failed to create Socket.IO connection:", err);
+            setSocketReadyState('error');
+            setError("Failed to create Socket.IO connection");
         }
-    }, [handleWebSocketMessage]);
+    }, [handleSocketMessage]);
 
     const fetchAndUpdateData = useCallback(
-        async (position?: { latitude: number; longitude: number }) => {
+        async (params: {
+            observer_position: Coordinates,
+            radius: number
+        }) => {
             setIsLoading(true);
             setError(null);
 
             try {
-                const aircrafts = await fetchAircraftDataFromServer(position);
+                const aircrafts = await fetchAircraftDataFromServer(params);
                 const formattedData = formatAircraftData(aircrafts);
                 setFormattedAircraftData(formattedData);
             } catch (err) {
@@ -264,24 +281,29 @@ export const AircraftDataProvider = ({ children }: AircraftDataProviderProps) =>
         []
     );
 
-    // Initialize WebSocket connection on mount
+    // Initialize Socket.IO connection on mount
     useEffect(() => {
-        // Fetch initial data via REST API
-        fetchAndUpdateData();
-        
-        // Connect WebSocket for real-time updates
-        reconnect();
+        const asyncEffect = async () => {
+            // Fetch initial data via REST API
+            // await fetchAndUpdateData();
 
-        return () => {
-            // Cleanup WebSocket connection
-            if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
-            }
-            if (wsRef.current) {
-                wsRef.current.close();
-                wsRef.current = null;
-            }
-        };
+            // Connect Socket.IO for real-time updates
+            reconnect();
+
+            return () => {
+                // Cleanup Socket.IO connection
+                if (reconnectTimeoutRef.current) {
+                    clearTimeout(reconnectTimeoutRef.current);
+                }
+                if (socketRef.current) {
+                    socketRef.current.disconnect();
+                    socketRef.current = null;
+                }
+            };
+        }
+
+        asyncEffect()
+
     }, [fetchAndUpdateData, reconnect]);
 
     const value: AircraftDataContextType = {
@@ -290,7 +312,7 @@ export const AircraftDataProvider = ({ children }: AircraftDataProviderProps) =>
         isLoading,
         error,
         refresh: fetchAndUpdateData,
-        wsReadyState,
+        socketReadyState,
         reconnect,
     };
 

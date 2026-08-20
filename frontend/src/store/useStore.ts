@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import type { Flights, FlightState } from '../scripts/scrap-airplane'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { focusCameraOnGPS } from '@/utilities/cameraUtils'
-// import sha256 from 'js-sha256'
 import { getSerialPorts, sendMovetoCommand } from '@/services/serialService';
 import { computeAngles } from '@/utilities';
 
@@ -36,11 +35,13 @@ function computeFlightsHash(flights: Flights | null): string {
   return (hash >>> 0).toString(16)
 }
 
-type Coordinates = Pick<FlightState, "baro_altitude" | "latitude" |"longitude">
+export type Coordinates = Pick<FlightState, "baro_altitude" | "latitude" |"longitude">
 
 type StoreState = {
   observerPosition: Coordinates | null
   setObserverPosition: (position: Coordinates) => void
+  searchRadius: number
+  setSearchRadius: (radius: number) => void
   flights: Flights
   flightsHash: string
   setFlights: (flights: Flights) => void
@@ -64,6 +65,8 @@ const DEFAULT_OBSERVER_POSITION: Coordinates = {
 export const useStore = create<StoreState>((set, get) => ({
   observerPosition: DEFAULT_OBSERVER_POSITION,
   setObserverPosition: (position) => set({ observerPosition: position }),
+  searchRadius: 20,
+  setSearchRadius: (radius) => set({ searchRadius: radius }),
   flights: null,
   flightsHash: "",
   setFlights: (newFlights: Flights | null) => {

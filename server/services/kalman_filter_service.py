@@ -10,8 +10,10 @@ from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 import numpy as np
+from socketio_instance import get_socketio
 
 from services.aircraft_service import aircraft_service
+from utils.logger import kalman_logger
 
 
 class KalmanFilterState(Enum):
@@ -128,15 +130,16 @@ class KalmanFilterService:
     
     # Earth radius in meters
     EARTH_RADIUS = 6371000.0
+
+    #Update timers in seconds : 
+    # Update interval for fetching new data
+    DATA_UPDATE_INTERVAL = 30.0
     
-    # Update interval for fetching new data (5 seconds)
-    DATA_UPDATE_INTERVAL = 5.0
-    
-    # Prediction interval (500ms)
-    PREDICTION_INTERVAL = 0.5
+    # Prediction interval
+    PREDICTION_INTERVAL = 10.0
     
     # Maximum time without measurement before marking as lost (30 seconds)
-    MAX_MEASUREMENT_AGE = 30.0
+    MAX_MEASUREMENT_AGE = 60.0
     
     # Process noise tuning parameters
     POSITION_PROCESS_NOISE = 10.0    # meters^2/s^3
@@ -152,7 +155,9 @@ class KalmanFilterService:
         Args:
             aircraft_service_ref: Reference to AircraftService (defaults to global instance)
         """
-        self._aircraft_service = aircraft_service_ref or aircraft_service
+        self.AIRCRAFT_SERVICE = aircraft_service_ref or aircraft_service
+        self._get_socketio = get_socketio
+
         
         # Track dictionary: callsign -> FlightTrack
         self._tracks: Dict[str, FlightTrack] = {}
@@ -163,6 +168,9 @@ class KalmanFilterService:
         
         # Latest predictions for API access
         self._latest_predictions: Dict[str, FlightPrediction] = {}
+
+        # Latest openssky API data
+        self._latest_flight_data: Dict[str, Dict] = {}
         
         # Data update thread
         self._data_update_thread: Optional[threading.Thread] = None
@@ -566,8 +574,8 @@ class KalmanFilterService:
                 predictions[callsign] = prediction
             except Exception as e:
                 # Skip tracks that fail to predict
-                print(f"[KALMAN] Error predicting for {callsign}: {e}")
-                print(track)
+                kalman_logger.error(f"Error predicting for {callsign}: {e}")
+                kalman_logger.debug(f"Track state: {track}")
                 
         return predictions
 
@@ -580,10 +588,21 @@ class KalmanFilterService:
         """
         try:
             # Fetch new data from OpenSky
-            data = self._aircraft_service.get_aircraft_in_area()
+            data = self.AIRCRAFT_SERVICE.get_aircraft_at_last_pos()
             
             # Parse the response
             flights = self._parse_opensky_response(data)
+
+            self._latest_flight_data = flights
+
+
+            self._get_socketio().emit("aircraft_data", flights, callback=lambda: 
+                kalman_logger.debug(f"Sent latest flight data with {len(flights)} flights")
+            )
+
+            # self._get_socketio().emit("latest_flight_data", flights, callback=lambda: 
+            #     kalman_logger.debug(f"Sent latest_flight_data with {len(flights)} flights")
+            # )
             
             if not flights:
                 return 0
@@ -601,15 +620,15 @@ class KalmanFilterService:
                             updated_tracks += 1
                             self._total_measurements += 1
                 
-                # Remove lost tracks
+                #TODO: Remove or store under speparate state the flights gone away from the range
                 removed_tracks = self._remove_lost_tracks()
                 
                 self._total_measurements += new_tracks
                 
-                return len(flights)
+                return flights
                 
         except Exception as e:
-            print(f"[KALMAN] Error updating from aircraft service: {e}")
+            kalman_logger.error(f"Error updating from aircraft service: {e}")
             return 0
 
     def _parse_opensky_response(self, data: Dict) -> Dict[str, Dict]:
@@ -668,20 +687,23 @@ class KalmanFilterService:
 
     def _data_update_loop(self):
         """Background thread to fetch new data every 5 seconds."""
-        print("[KALMAN] Starting data update thread...")
+        kalman_logger.info("Starting data update thread...")
         
         while not self._shutdown_flag.is_set():
             start_time = self._get_current_time()
             
             try:
-                count = self.update_from_aircraft_service()
+                updated_data = self.update_from_aircraft_service()
                 self._last_data_update = self._get_current_time()
                 
-                if count > 0:
-                    print(f"[KALMAN] Updated {count} flights at {self._last_data_update:.2f}")
+                if len(updated_data) > 0:
+                    kalman_logger.info(f"Updated {len(updated_data)} flights at {self._last_data_update:.2f}")
+
+                    self.AIRCRAFT_SERVICE.get_aircraft_at_last_pos()
                     
             except Exception as e:
-                print(f"[KALMAN] Error in data update loop: {e}")
+                kalman_logger.error(f"Error in data update loop: {e}")
+                print(e)
                 
             # Sleep for the remaining interval
             elapsed = self._get_current_time() - start_time
@@ -694,7 +716,7 @@ class KalmanFilterService:
                 
     def _prediction_loop(self):
         """Background thread to generate predictions every 500ms."""
-        print("[KALMAN] Starting prediction thread...")
+        kalman_logger.info("Starting prediction thread...")
         
         while not self._shutdown_flag.is_set():
             start_time = self._get_current_time()
@@ -710,10 +732,10 @@ class KalmanFilterService:
                     
                 # Log occasionally
                 if self._total_predictions % 10 == 0:
-                    print(f"[KALMAN] Generated {len(predictions)} predictions at {start_time:.2f}")
+                    kalman_logger.info(f"Generated {len(predictions)} predictions at {start_time:.2f}")
                     
             except Exception as e:
-                print(f"[KALMAN] Error in prediction loop: {e}")
+                kalman_logger.error(f"Error in prediction loop: {e}")
                 
             # Sleep for the remaining interval
             elapsed = self._get_current_time() - start_time
@@ -776,7 +798,7 @@ class KalmanFilterService:
 
     def start(self):
         """Start the Kalman filter service threads."""
-        print("[KALMAN] Starting Kalman filter service...")
+        kalman_logger.info("Starting Kalman filter service...")
         
         self._shutdown_flag.clear()
         
@@ -796,11 +818,11 @@ class KalmanFilterService:
         )
         self._prediction_thread.start()
         
-        print("[KALMAN] Service started successfully")
+        kalman_logger.info("Service started successfully")
 
     def stop(self):
         """Stop the Kalman filter service threads."""
-        print("[KALMAN] Stopping Kalman filter service...")
+        kalman_logger.info("Stopping Kalman filter service...")
         
         self._shutdown_flag.set()
         
@@ -811,7 +833,7 @@ class KalmanFilterService:
         if self._prediction_thread and self._prediction_thread.is_alive():
             self._prediction_thread.join(timeout=5.0)
             
-        print("[KALMAN] Service stopped")
+        kalman_logger.info("Service stopped")
 
 
 # Global service instance

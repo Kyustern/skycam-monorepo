@@ -8,6 +8,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 function App() {
   const setFlights = useStore(state => state.setFlights)
   const observerPosition = useStore(state => state.observerPosition)
+  const searchRadius = useStore(state => state.searchRadius)
   const controlsRef = useRef<OrbitControlsImpl>(null)
   const { error: aircraftDataError, formattedAircraftData, isLoading: aircraftDataLoading, refresh } = useAircraftData()
 
@@ -21,9 +22,9 @@ function App() {
   // Refresh aircraft data when observer position changes
   useEffect(() => {
     if (observerPosition) {
-      refresh(observerPosition)
+      refresh({observer_position: observerPosition, radius: searchRadius})
     }
-  }, [observerPosition, refresh])
+  }, [observerPosition, searchRadius, refresh])
 
   return (
     <div className="grid grid-cols-[20rem_auto] h-screen">

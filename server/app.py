@@ -2,7 +2,8 @@ import serial
 import serial.tools.list_ports
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from flask_socketio import emit
+from socketio_instance import init_socketio, get_socketio
 import os
 import threading
 import time
@@ -10,12 +11,14 @@ import signal
 import sys
 from services.aircraft_service import aircraft_service
 from services.kalman_filter_service import kalman_filter_service
+from utils.logger import serial_logger, websocket_logger, server_logger
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
 # Initialize SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+init_socketio(app, cors_allowed_origins="*", async_mode='threading', path="/api/ws")
+socketio = get_socketio()
 
 # Global serial connection
 serial_connection = None
@@ -29,15 +32,14 @@ connected_clients = set()
 heartbeat_lock = threading.Lock()
 
 # Heartbeat interval (500ms)
-HEARTBEAT_INTERVAL = 0.5
-
+HEARTBEAT_INTERVAL = 5.0
 def list_serial_ports():
     """Return a list of available serial ports."""
     try:
         ports = serial.tools.list_ports.comports()
         return [port.device for port in ports]
     except Exception as e:
-        print(f"Error listing serial ports: {e}")
+        serial_logger.error(f"Error listing serial ports: {e}")
         return []
 
 def init_serial():
@@ -56,14 +58,14 @@ def init_serial():
             baudrate=serial_rate,
             timeout=1
         )
-        print(f"[SERIAL] Connected to {serial_port} at {serial_rate} baud")
+        serial_logger.info(f"Connected to {serial_port} at {serial_rate} baud")
         
         shutdown_flag.clear()
         reader_thread = threading.Thread(target=read_serial, daemon=True)  # Make daemon
         reader_thread.start()
         return True
     except Exception as e:
-        print(f"[SERIAL] Error connecting to {serial_port}: {e}")
+        serial_logger.error(f"Error connecting to {serial_port}: {e}")
         serial_connection = None
         return False
 
@@ -74,17 +76,17 @@ def read_serial():
     if serial_connection is None:
         return
     
-    print("[SERIAL] Starting serial reader thread...")
+    serial_logger.info("Starting serial reader thread...")
     
     while serial_connection and serial_connection.is_open and not shutdown_flag.is_set():
         try:
             if serial_connection.in_waiting > 0:
                 line = serial_connection.readline().decode('utf-8', errors='ignore').strip()
                 if line:
-                    print(f"[SERIAL] {line}")
+                    serial_logger.info(line)
             time.sleep(0.01)  # Small delay to prevent CPU overload
         except serial.SerialException as e:
-            print(f"[SERIAL] Connection error: {e}")
+            serial_logger.error(f"Connection error: {e}")
             try:
                 serial_connection.close()
             except:
@@ -96,32 +98,32 @@ def read_serial():
                 init_serial()
             break
         except Exception as e:
-            print(f"[SERIAL] Unexpected error: {e}")
+            serial_logger.error(f"Unexpected error: {e}")
             break
 
 
 def send_serial_command(command_str):
     """Send a command string to the serial port."""
     global serial_connection
-    print("serial_connection", serial_connection)
+    serial_logger.debug(f"Sending command, connection: {serial_connection}")
     if serial_connection and serial_connection.is_open:
         try:
-            print("command_str", command_str)
+            serial_logger.debug(f"Command to send: {command_str}")
             serial_connection.write(command_str.encode('utf-8') + b'\n')
-            print(f"[SERIAL] Sent: {command_str}")
+            serial_logger.info(f"Sent: {command_str}")
             return True
         except Exception as e:
-            print(f"[SERIAL] Error sending command: {e}")
+            serial_logger.error(f"Error sending command: {e}")
             return False
     else:
-        print("[SERIAL] Error: Serial port not connected")
+        serial_logger.error("Serial port not connected")
         return False
 
 
 def cleanup_serial():
     """Cleanup serial connection and reader thread on shutdown."""
     global serial_connection, reader_thread
-    print("[SERIAL] Cleaning up serial connection...")
+    serial_logger.info("Cleaning up serial connection...")
     
     # Signal the reader thread to stop
     shutdown_flag.set()
@@ -130,9 +132,9 @@ def cleanup_serial():
     if serial_connection and serial_connection.is_open:
         try:
             serial_connection.close()
-            print("[SERIAL] Serial port closed")
+            serial_logger.info("Serial port closed")
         except Exception as e:
-            print(f"[SERIAL] Error closing serial port: {e}")
+            serial_logger.error(f"Error closing serial port: {e}")
         finally:
             serial_connection = None
     
@@ -140,14 +142,14 @@ def cleanup_serial():
     if reader_thread and reader_thread.is_alive():
         reader_thread.join(timeout=2.0)
         if reader_thread.is_alive():
-            print("[SERIAL] Warning: Reader thread did not stop gracefully")
+            serial_logger.warning("Reader thread did not stop gracefully")
         else:
-            print("[SERIAL] Reader thread stopped")
+            serial_logger.info("Reader thread stopped")
 
 
 def signal_handler(sig, frame):
     """Handle shutdown signals gracefully."""
-    print(f"\n[SERIAL] Received signal {sig}, shutting down...")
+    serial_logger.info(f"Received signal {sig}, shutting down...")
     cleanup_serial()
     sys.exit(0)
 
@@ -155,11 +157,11 @@ def signal_handler(sig, frame):
 def heartbeat_loop():
     """Background thread that sends heartbeat to all connected WebSocket clients every 500ms."""
     global heartbeat_active
-    print("[WEBSOCKET] Starting heartbeat loop...")
+    websocket_logger.info("Starting heartbeat loop...")
     
     while heartbeat_active:
         with heartbeat_lock:
-            #Getting the freshest preditcion data : 
+            # Getting the freshest prediction data
             predictions = kalman_filter_service.get_latest_predictions()
             # json_message = jsonify({
             #     "predictions": predictions,
@@ -169,36 +171,35 @@ def heartbeat_loop():
 
             # Send heartbeat to all connected clients
             for sid in list(connected_clients):
-                try:
-                    socketio.emit('heartbeat_plus', {
-                        "predictions": predictions,
-                        "count": len(predictions),
-                        "timestamp": time.time()}, room=sid)
-                except Exception as e:
-                    print(f"[WEBSOCKET] Error sending data to room {sid}: {e}")
-                    connected_clients.discard(sid)
+                print("SENDING HEARTBEAT HELLO ????")
+                socketio.emit('heartbeat_predictions', "heartbeat", room=sid)
+                # websocket_logger.error(f"Error sending data to room {sid}: {e}")
+                # connected_clients.discard(sid)
         
         # Sleep for the heartbeat interval
         time.sleep(HEARTBEAT_INTERVAL)
     
-    print("[WEBSOCKET] Heartbeat loop stopped")
+    websocket_logger.info("Heartbeat loop stopped")
 
 
 def start_heartbeat():
     """Start the heartbeat thread."""
     global heartbeat_active, heartbeat_thread
     
-    if heartbeat_active:
-        return
-    
-    heartbeat_active = True
-    heartbeat_thread = threading.Thread(
-        target=heartbeat_loop,
-        daemon=True,
-        name="websocket-heartbeat"
-    )
-    heartbeat_thread.start()
-    print("[WEBSOCKET] Heartbeat started")
+    try:
+        if heartbeat_active:
+            return
+        
+        heartbeat_active = True
+        heartbeat_thread = threading.Thread(
+            target=heartbeat_loop,
+            daemon=True,
+            name="websocket-heartbeat"
+        )
+        heartbeat_thread.start()
+        websocket_logger.info("Heartbeat started")
+    except Exception as e:
+        print("e", e)
 
 
 def stop_heartbeat():
@@ -208,7 +209,7 @@ def stop_heartbeat():
     heartbeat_active = False
     if heartbeat_thread and heartbeat_thread.is_alive():
         heartbeat_thread.join(timeout=1.0)
-    print("[WEBSOCKET] Heartbeat stopped")
+    websocket_logger.info("Heartbeat stopped")
 
 
 # WebSocket event handlers
@@ -217,8 +218,8 @@ def handle_connect():
     """Handle new WebSocket connection."""
     with heartbeat_lock:
         connected_clients.add(request.sid)
-    print(f"[WEBSOCKET] Client connected: {request.sid} (Total: {len(connected_clients)})")
-    emit('connected', {'message': 'Connected to Turret WebSocket server', 'sid': request.sid})
+    websocket_logger.info(f"Client connected: {request.sid} (Total: {len(connected_clients)})")
+    socketio.emit('connected', f"one guy succesfully connected on the server ! sid : {request.sid}")
 
 
 @socketio.on('disconnect')
@@ -226,7 +227,7 @@ def handle_disconnect():
     """Handle WebSocket disconnection."""
     with heartbeat_lock:
         connected_clients.discard(request.sid)
-    print(f"[WEBSOCKET] Client disconnected: {request.sid} (Total: {len(connected_clients)})")
+    websocket_logger.info(f"Client disconnected: {request.sid} (Total: {len(connected_clients)})")
 
 
 # Basic health check endpoint
@@ -251,7 +252,7 @@ def get_status():
 @app.route('/api/turret/command', methods=['POST'])
 def send_command():
     data = request.get_json()
-    print("hit")
+    server_logger.debug("Command endpoint hit")
     
     if data is None:
         return jsonify({"status": "error", "error": "No JSON data provided"}), 400
@@ -305,7 +306,7 @@ def get_serial_ports():
 @app.route('/api/serial/connect', methods=['GET'])
 def connect_serial():
     ports = list_serial_ports()
-    print("ports", ports)
+    server_logger.debug(f"Available ports: {ports}")
 
     return jsonify({
         "ports": ports,
@@ -323,7 +324,7 @@ def send_serial():
         
         if message and 'azimuth' in message and 'elevation' in message:
             moveto_cmd = f"moveto {message['azimuth']} {message['elevation']}"
-            print("moveto_cmd", moveto_cmd)
+            server_logger.debug(f"Sending moveto command: {moveto_cmd}")
             success = send_serial_command(moveto_cmd)
             if success:
                 return jsonify({"status": "sent to serial", "message": message}), 200
@@ -335,57 +336,39 @@ def send_serial():
         return jsonify({"status": "ready", "message": "POST to this endpoint to send serial data"}), 200
 
 
-# Aircraft Data API Endpoints
-@app.route('/api/aircraft', methods=['GET'])
-def get_aircraft():
-    """
-    Get aircraft data for the default Toulouse area or a custom bounding box.
-    
-    Query parameters:
-    - lat_min: Minimum latitude (default: 42.8448)
-    - lat_max: Maximum latitude (default: 44.1972)
-    - lon_min: Minimum longitude (default: 0.6213)
-    - lon_max: Maximum longitude (default: 2.2152)
-    """
-    try:
-        lat_min = request.args.get('lat_min', type=float)
-        lat_max = request.args.get('lat_max', type=float)
-        lon_min = request.args.get('lon_min', type=float)
-        lon_max = request.args.get('lon_max', type=float)
-        
-        data = aircraft_service.get_aircraft_in_area(
-            lat_min=lat_min,
-            lat_max=lat_max,
-            lon_min=lon_min,
-            lon_max=lon_max,
-        )
-        
-        return jsonify(data), 200
-        
-    except Exception as e:
-        return jsonify({"status": "error", "error": str(e)}), 500
-
-
-@app.route('/api/aircraft/position', methods=['GET'])
+@app.route('/api/aircraft/position', methods=['POST'])
 def get_aircraft_by_position():
     """
     Get aircraft data around a specific GPS position.
     
-    Query parameters:
+    JSON body parameters:
     - lat: Latitude of center point (required)
     - lon: Longitude of center point (required)
     - radius_km: Search radius in kilometers (default: 100)
     """
     try:
-        latitude = request.args.get('lat', type=float)
-        longitude = request.args.get('lon', type=float)
-        radius_km = request.args.get('radius_km', default=100.0, type=float)
+        body = request.get_json()
+        print("body", body)
+        if not body:
+            return jsonify({
+                "status": "error",
+                "error": "Request body must be JSON"
+            }), 400
+        
+        latitude = body.get('lat')
+        longitude = body.get('lon')
+        radius_km = body.get('radius_km', 100.0)
         
         if latitude is None or longitude is None:
             return jsonify({
                 "status": "error",
-                "error": "lat and lon query parameters are required"
+                "error": "lat and lon are required in request body"
             }), 400
+        
+        # Convert to float
+        latitude = float(latitude)
+        longitude = float(longitude)
+        radius_km = float(radius_km)
         
         data = aircraft_service.get_aircraft_at_position(
             latitude=latitude,
@@ -510,23 +493,22 @@ if __name__ == '__main__':
     # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    print("SERVER STARTING AAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHh")
     
     # Initialize serial connection
     
     ports = list_serial_ports()
-    print(f"Available serial ports: {ports}")
+    server_logger.info(f"Available serial ports: {ports}")
     init_serial()
     if not ports:
-        print("[SERIAL] Warning: No serial ports found!")
+        serial_logger.warning("No serial ports found!")
     
     try:
         # Start WebSocket heartbeat
-        print("[WEBSOCKET] Starting heartbeat service...")
+        websocket_logger.info("Starting heartbeat service...")
         start_heartbeat()
         
         # Start Kalman filter service
-        print("[KALMAN] Starting Kalman filter service on server startup...")
+        server_logger.info("Starting Kalman filter service on server startup...")
         kalman_filter_service.start()
         
         socketio.run(app, host='0.0.0.0', port=5000, debug=True)

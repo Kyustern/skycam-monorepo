@@ -12,6 +12,11 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
       },
+        '/api/ws/': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        ws: true
+      },
       '/auth.opensky-network.org': {
         target: 'https://auth.opensky-network.org',
         changeOrigin: true,

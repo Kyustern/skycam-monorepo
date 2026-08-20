@@ -1,5 +1,5 @@
 import { OrbitControls, Stars } from "@react-three/drei"
-import { Canvas } from "@react-three/fiber"
+import { Canvas, useLoader } from "@react-three/fiber"
 import { useRef, useEffect, useMemo } from "react"
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useStore } from "../../store/useStore"
@@ -9,13 +9,37 @@ import { ConnectionLine } from "../ConnectionLine"
 import { EarthCities } from "../EarthCities"
 import { EarthGrid } from "../EarthGrid"
 import { ObserverMarker } from "../ObserverMarker"
-import { SpinningEarth } from "../SpinningEarth"
+import { Earth } from "../SpinningEarth"
 import { AngleDisplay } from "../layout/AngleDisplay"
 import { HumidityVisibilityDisplay } from "../layout/HumidityVisibilityDisplay"
 import { ZoomControl } from "../layout/ZoomControl"
 import * as THREE from 'three'
 import { kmToSceneUnits } from "@/utilities/unitConversions"
-// extend({ ZoomControl })
+import { TextureLoader } from 'three'
+import { AxesHelper } from "../AxesHelper"
+
+// Earth mesh component with texture
+const EarthMesh = ({ children }: { children: React.ReactNode }) => {
+    const earthRef = useRef<THREE.Group>(null)
+    //     useFrame(() => {
+    //     if (earthRef.current) {
+    //       // earthRef.current.rotation.y += 0.001
+    //     }
+    //   })
+
+    const earthTexture = useLoader(TextureLoader, "assets/3d/textures/world.200401.3x21600x10800.jpg")
+    return (
+        // <group ref={earthRef}>
+        <group>
+            <AxesHelper />
+            {children}
+            <mesh rotation={[0, (Math.PI / 2) * 3, 0]}>
+                <sphereGeometry args={[5, 128, 128]} />
+                <meshBasicMaterial map={earthTexture} />
+            </mesh>
+        </group>
+    )
+}
 
 const GradientBackground = ({ darknessMultiplier }: { darknessMultiplier: number }) => {
     const texture = useMemo(() => {
@@ -66,52 +90,36 @@ export const MainScene = ({ controlsRef }: MainSceneProps) => {
             setControls(controlsRef.current)
         }
     },
-    [setControls, controlsRef, controlsRef.current])
-    // Set default position to Toulouse
-    // useEffect(() => {
-    //     setObserverPosition({ latitude: 43.6047, longitude: 1.4442, baro_altitude: 150 })
-    // }, [setObserverPosition])
-
-    // Auto-focus camera based on selected flight only (not observer position)
+        [setControls, controlsRef, controlsRef.current])
 
     const cameraDistances: { minDistance: number, maxDistance: number } = useMemo(() => {
-        return { minDistance: kmToSceneUnits(1), maxDistance: 2 }
+        return { minDistance: kmToSceneUnits(1), maxDistance: 10 }
     }, [])
 
     return (
         <div className="h-full relative">
 
-            <Canvas 
-                camera={{ position: [0, 0, 10], fov: 50, rotation: [0, 0, 0], near: 0.01, far: 100 }} 
+            <Canvas
+                camera={{ position: [0, 0, 10], fov: 50, rotation: [0, 0, 0], near: 0.01, far: 100 }}
                 onCreated={({ gl }) => {
-                gl.setAnimationLoop(null)
-                const animate = () => {
-                    controlsRef.current?.update()
-                    // setCameraPos({
-                    //     x: camera.position.x,
-                    //     y: camera.position.y,
-                    //     z: camera.position.z
-                    // })
-                    requestAnimationFrame(animate)
-                }
-                animate()
-            }}>
+                    gl.setAnimationLoop(null)
+                    const animate = () => {
+                        controlsRef.current?.update()
+                        requestAnimationFrame(animate)
+                    }
+                    animate()
+                }}>
                 <GradientBackground darknessMultiplier={darkness} />
-                <ambientLight intensity={0.5} />
+                <ambientLight intensity={1} />
                 <pointLight position={[10, 10, 10]} />
-                <SpinningEarth>
-                    <mesh>
-                        <sphereGeometry args={[5, 128, 128]} />
-                        <meshStandardMaterial color="lightgrey" />
-                    </mesh>
+                    <EarthMesh>
                     <EarthGrid />
-                    {/* <EarthContinents /> */}
                     <EarthCities />
                     <ObserverMarker />
                     <AirplaneMarker />
                     <ConnectionLine />
                     <AzimuthAngleOverlay />
-                </SpinningEarth>
+                    </EarthMesh>
                 <OrbitControls
                     ref={controlsRef}
                     enableDamping
