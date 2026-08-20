@@ -6,8 +6,6 @@ export const FlightSidebar = () => {
   const setSelectionMode = useStore(state => state.setSelectionMode)
   const setSelectedFlight = useStore(state => state.setSelectedFlight)
   const flights = useStore(state => state.flights)
-  // const [flights, setFlights] = useState<FormattedAircraftData | null>()
-
 
   const handleFlightSelect = (flight: FlightState) => {
     setSelectedFlight(flight)

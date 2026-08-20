@@ -16,7 +16,6 @@ export const AngleDisplay = () => {
       signedAzimuth: formatAngle(angles.signedAzimuth),
       verticalAngle: formatAngle(angles.verticalAngle)
     }
-    console.log('LTES - selectedFlight', selectedFlight);
     sendMovetoCommand({ azimuth: parseFloat(formatedAngles.signedAzimuth), elevation: parseFloat(formatedAngles.verticalAngle) })
     return formatedAngles
   }, [selectedFlight])

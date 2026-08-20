@@ -32,6 +32,8 @@ export const Sidebar = ({ controlsRef }: SidebarProps) => {
   }, [darkTheme])
 
 
+  console.log('LTES - selectedFlight', selectedFlight);
+
   const handleFlightSelect = (flight: FlightState) => {
     setSelectedFlight(flight)
     setSelectionMode(null)
@@ -93,7 +95,7 @@ export const Sidebar = ({ controlsRef }: SidebarProps) => {
             </h2>
             <div className="text-sm text-gray-400">{selectedFlight.latitude.toFixed(4)}°N, {selectedFlight.longitude.toFixed(4)}°E</div>
             <div>
-              {selectedFlight.baro_altitude_km.toFixed(3)} km
+              {(selectedFlight.baro_altitude/ 1000).toFixed(3)} km
             </div>
 
             </>

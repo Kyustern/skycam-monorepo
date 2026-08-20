@@ -2,7 +2,7 @@ import { Sidebar } from './components/layout/Sidebar'
 import { MainScene } from './components/layout/MainScene'
 import { useEffect, useRef } from 'react'
 import { useStore } from '@/store/useStore'
-    import { AircraftDataProvider, useAircraftData } from './contexts'
+import { useWebSocketStore } from '@/store/useWebSocketStore'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 
 function App() {
@@ -10,21 +10,38 @@ function App() {
   const observerPosition = useStore(state => state.observerPosition)
   const searchRadius = useStore(state => state.searchRadius)
   const controlsRef = useRef<OrbitControlsImpl>(null)
-  const { error: aircraftDataError, formattedAircraftData, isLoading: aircraftDataLoading, refresh } = useAircraftData()
+  
+  const { 
+    flights: wsFlights, 
+    error: wsError, 
+    isLoading: wsLoading, 
+    fetchAndUpdateData,
+    reconnect,
+    socketReadyState 
+  } = useWebSocketStore();
 
-  // Update flights in store when data is loaded
+  // Initialize websocket connection on mount
   useEffect(() => {
-    if (!aircraftDataLoading && !aircraftDataError && setFlights && formattedAircraftData) {
-      setFlights(formattedAircraftData)
+    reconnect();
+    
+    return () => {
+      // Cleanup will be handled by the store's disconnect
+    };
+  }, [reconnect]);
+
+  // Update flights in store when websocket data is loaded
+  useEffect(() => {
+    if (!wsLoading && !wsError && setFlights && wsFlights) {
+      setFlights(wsFlights)
     }
-  }, [aircraftDataLoading, formattedAircraftData, aircraftDataError, setFlights])
+  }, [wsLoading, wsFlights, wsError, setFlights])
 
   // Refresh aircraft data when observer position changes
   useEffect(() => {
     if (observerPosition) {
-      refresh({observer_position: observerPosition, radius: searchRadius})
+      fetchAndUpdateData({observer_position: observerPosition, radius: searchRadius})
     }
-  }, [observerPosition, searchRadius, refresh])
+  }, [observerPosition, searchRadius, fetchAndUpdateData])
 
   return (
     <div className="grid grid-cols-[20rem_auto] h-screen">

@@ -594,10 +594,10 @@ class KalmanFilterService:
             flights = self._parse_opensky_response(data)
 
             self._latest_flight_data = flights
-
+            # self._latest_flight_data = list(flights.values())
 
             self._get_socketio().emit("aircraft_data", flights, callback=lambda: 
-                kalman_logger.debug(f"Sent latest flight data with {len(flights)} flights")
+                kalman_logger.debug(f"Sent latest flight data with {len(list(flights.values()))} flights")
             )
 
             # self._get_socketio().emit("latest_flight_data", flights, callback=lambda: 
@@ -697,7 +697,7 @@ class KalmanFilterService:
                 self._last_data_update = self._get_current_time()
                 
                 if len(updated_data) > 0:
-                    kalman_logger.info(f"Updated {len(updated_data)} flights at {self._last_data_update:.2f}")
+                    kalman_logger.info(f"Updated {len(list(updated_data))} flights at {self._last_data_update:.2f}")
 
                     self.AIRCRAFT_SERVICE.get_aircraft_at_last_pos()
                     

@@ -1,11 +1,7 @@
 import { create } from 'zustand'
-import type { Flights, FlightState } from '../scripts/scrap-airplane'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { focusCameraOnGPS } from '@/utilities/cameraUtils'
-import { getSerialPorts, sendMovetoCommand } from '@/services/serialService';
-import { computeAngles } from '@/utilities';
-
-// In useStore.ts, replace the computeFlightsHash function with:
+import { Flights } from '@/types/flightData';
 
 function computeFlightsHash(flights: Flights | null): string {
   if (!flights) return ''
@@ -35,7 +31,7 @@ function computeFlightsHash(flights: Flights | null): string {
   return (hash >>> 0).toString(16)
 }
 
-export type Coordinates = Pick<FlightState, "baro_altitude" | "latitude" |"longitude">
+export type Coordinates = Pick<import('@/types/flightData').FlightState, "baro_altitude" | "latitude" |"longitude">
 
 type StoreState = {
   observerPosition: Coordinates | null
@@ -45,8 +41,8 @@ type StoreState = {
   flights: Flights
   flightsHash: string
   setFlights: (flights: Flights) => void
-  selectedFlight: FlightState | null
-  setSelectedFlight: (flight: FlightState) => void
+  selectedFlight: import('@/types/flightData').FlightState | null
+  setSelectedFlight: (flight: import('@/types/flightData').FlightState) => void
   selectionMode: 'airplane' | 'satellite' | 'spatial' | null
   setSelectionMode: (mode: 'airplane' | 'satellite' | 'spatial' | null) => void
   darkness: number
@@ -67,7 +63,7 @@ export const useStore = create<StoreState>((set, get) => ({
   setObserverPosition: (position) => set({ observerPosition: position }),
   searchRadius: 20,
   setSearchRadius: (radius) => set({ searchRadius: radius }),
-  flights: null,
+  flights: {},
   flightsHash: "",
   setFlights: (newFlights: Flights | null) => {
     const newHash = computeFlightsHash(newFlights)

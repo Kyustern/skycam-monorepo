@@ -1932,9 +1932,9 @@ var require_react_dom_client_development = __commonJS((exports) => {
               if (typeof entry.name === "string") {
                 var JSCompiler_temp_const = info;
                 a: {
-                  var { name, env, debugLocation: location } = entry;
-                  if (location != null) {
-                    var childStack = formatOwnerStack(location), idx = childStack.lastIndexOf(`
+                  var { name, env, debugLocation: location2 } = entry;
+                  if (location2 != null) {
+                    var childStack = formatOwnerStack(location2), idx = childStack.lastIndexOf(`
 `), lastLine = idx === -1 ? childStack : childStack.slice(idx + 1);
                     if (lastLine.indexOf(name) !== -1) {
                       var JSCompiler_inline_result = `
@@ -17480,8 +17480,453 @@ var require_jsx_runtime = __commonJS((exports, module) => {
   }
 });
 
+// node_modules/ms/index.js
+var require_ms = __commonJS((exports, module) => {
+  var s = 1000;
+  var m2 = s * 60;
+  var h2 = m2 * 60;
+  var d = h2 * 24;
+  var w = d * 7;
+  var y = d * 365.25;
+  module.exports = function(val, options) {
+    options = options || {};
+    var type = typeof val;
+    if (type === "string" && val.length > 0) {
+      return parse2(val);
+    } else if (type === "number" && isFinite(val)) {
+      return options.long ? fmtLong(val) : fmtShort(val);
+    }
+    throw new Error("val is not a non-empty string or a valid number. val=" + JSON.stringify(val));
+  };
+  function parse2(str) {
+    str = String(str);
+    if (str.length > 100) {
+      return;
+    }
+    var match = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(str);
+    if (!match) {
+      return;
+    }
+    var n = parseFloat(match[1]);
+    var type = (match[2] || "ms").toLowerCase();
+    switch (type) {
+      case "years":
+      case "year":
+      case "yrs":
+      case "yr":
+      case "y":
+        return n * y;
+      case "weeks":
+      case "week":
+      case "w":
+        return n * w;
+      case "days":
+      case "day":
+      case "d":
+        return n * d;
+      case "hours":
+      case "hour":
+      case "hrs":
+      case "hr":
+      case "h":
+        return n * h2;
+      case "minutes":
+      case "minute":
+      case "mins":
+      case "min":
+      case "m":
+        return n * m2;
+      case "seconds":
+      case "second":
+      case "secs":
+      case "sec":
+      case "s":
+        return n * s;
+      case "milliseconds":
+      case "millisecond":
+      case "msecs":
+      case "msec":
+      case "ms":
+        return n;
+      default:
+        return;
+    }
+  }
+  function fmtShort(ms) {
+    var msAbs = Math.abs(ms);
+    if (msAbs >= d) {
+      return Math.round(ms / d) + "d";
+    }
+    if (msAbs >= h2) {
+      return Math.round(ms / h2) + "h";
+    }
+    if (msAbs >= m2) {
+      return Math.round(ms / m2) + "m";
+    }
+    if (msAbs >= s) {
+      return Math.round(ms / s) + "s";
+    }
+    return ms + "ms";
+  }
+  function fmtLong(ms) {
+    var msAbs = Math.abs(ms);
+    if (msAbs >= d) {
+      return plural(ms, msAbs, d, "day");
+    }
+    if (msAbs >= h2) {
+      return plural(ms, msAbs, h2, "hour");
+    }
+    if (msAbs >= m2) {
+      return plural(ms, msAbs, m2, "minute");
+    }
+    if (msAbs >= s) {
+      return plural(ms, msAbs, s, "second");
+    }
+    return ms + " ms";
+  }
+  function plural(ms, msAbs, n, name) {
+    var isPlural = msAbs >= n * 1.5;
+    return Math.round(ms / n) + " " + name + (isPlural ? "s" : "");
+  }
+});
+
+// node_modules/debug/src/common.js
+var require_common = __commonJS((exports, module) => {
+  function setup(env) {
+    createDebug.debug = createDebug;
+    createDebug.default = createDebug;
+    createDebug.coerce = coerce;
+    createDebug.disable = disable;
+    createDebug.enable = enable;
+    createDebug.enabled = enabled;
+    createDebug.humanize = require_ms();
+    createDebug.destroy = destroy;
+    Object.keys(env).forEach((key) => {
+      createDebug[key] = env[key];
+    });
+    createDebug.names = [];
+    createDebug.skips = [];
+    createDebug.formatters = {};
+    function selectColor(namespace) {
+      let hash = 0;
+      for (let i3 = 0;i3 < namespace.length; i3++) {
+        hash = (hash << 5) - hash + namespace.charCodeAt(i3);
+        hash |= 0;
+      }
+      return createDebug.colors[Math.abs(hash) % createDebug.colors.length];
+    }
+    createDebug.selectColor = selectColor;
+    function createDebug(namespace) {
+      let prevTime;
+      let enableOverride = null;
+      let namespacesCache;
+      let enabledCache;
+      function debug(...args) {
+        if (!debug.enabled) {
+          return;
+        }
+        const self2 = debug;
+        const curr = Number(new Date);
+        const ms = curr - (prevTime || curr);
+        self2.diff = ms;
+        self2.prev = prevTime;
+        self2.curr = curr;
+        prevTime = curr;
+        args[0] = createDebug.coerce(args[0]);
+        if (typeof args[0] !== "string") {
+          args.unshift("%O");
+        }
+        let index = 0;
+        args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
+          if (match === "%%") {
+            return "%";
+          }
+          index++;
+          const formatter = createDebug.formatters[format];
+          if (typeof formatter === "function") {
+            const val = args[index];
+            match = formatter.call(self2, val);
+            args.splice(index, 1);
+            index--;
+          }
+          return match;
+        });
+        createDebug.formatArgs.call(self2, args);
+        const logFn = self2.log || createDebug.log;
+        logFn.apply(self2, args);
+      }
+      debug.namespace = namespace;
+      debug.useColors = createDebug.useColors();
+      debug.color = createDebug.selectColor(namespace);
+      debug.extend = extend2;
+      debug.destroy = createDebug.destroy;
+      Object.defineProperty(debug, "enabled", {
+        enumerable: true,
+        configurable: false,
+        get: () => {
+          if (enableOverride !== null) {
+            return enableOverride;
+          }
+          if (namespacesCache !== createDebug.namespaces) {
+            namespacesCache = createDebug.namespaces;
+            enabledCache = createDebug.enabled(namespace);
+          }
+          return enabledCache;
+        },
+        set: (v) => {
+          enableOverride = v;
+        }
+      });
+      if (typeof createDebug.init === "function") {
+        createDebug.init(debug);
+      }
+      return debug;
+    }
+    function extend2(namespace, delimiter) {
+      const newDebug = createDebug(this.namespace + (typeof delimiter === "undefined" ? ":" : delimiter) + namespace);
+      newDebug.log = this.log;
+      return newDebug;
+    }
+    function enable(namespaces) {
+      createDebug.save(namespaces);
+      createDebug.namespaces = namespaces;
+      createDebug.names = [];
+      createDebug.skips = [];
+      const split = (typeof namespaces === "string" ? namespaces : "").trim().replace(/\s+/g, ",").split(",").filter(Boolean);
+      for (const ns of split) {
+        if (ns[0] === "-") {
+          createDebug.skips.push(ns.slice(1));
+        } else {
+          createDebug.names.push(ns);
+        }
+      }
+    }
+    function matchesTemplate(search, template) {
+      let searchIndex = 0;
+      let templateIndex = 0;
+      let starIndex = -1;
+      let matchIndex = 0;
+      while (searchIndex < search.length) {
+        if (templateIndex < template.length && (template[templateIndex] === search[searchIndex] || template[templateIndex] === "*")) {
+          if (template[templateIndex] === "*") {
+            starIndex = templateIndex;
+            matchIndex = searchIndex;
+            templateIndex++;
+          } else {
+            searchIndex++;
+            templateIndex++;
+          }
+        } else if (starIndex !== -1) {
+          templateIndex = starIndex + 1;
+          matchIndex++;
+          searchIndex = matchIndex;
+        } else {
+          return false;
+        }
+      }
+      while (templateIndex < template.length && template[templateIndex] === "*") {
+        templateIndex++;
+      }
+      return templateIndex === template.length;
+    }
+    function disable() {
+      const namespaces = [
+        ...createDebug.names,
+        ...createDebug.skips.map((namespace) => "-" + namespace)
+      ].join(",");
+      createDebug.enable("");
+      return namespaces;
+    }
+    function enabled(name) {
+      for (const skip of createDebug.skips) {
+        if (matchesTemplate(name, skip)) {
+          return false;
+        }
+      }
+      for (const ns of createDebug.names) {
+        if (matchesTemplate(name, ns)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    function coerce(val) {
+      if (val instanceof Error) {
+        return val.stack || val.message;
+      }
+      return val;
+    }
+    function destroy() {
+      console.warn("Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
+    }
+    createDebug.enable(createDebug.load());
+    return createDebug;
+  }
+  module.exports = setup;
+});
+
+// node_modules/debug/src/browser.js
+var require_browser = __commonJS((exports, module) => {
+  exports.formatArgs = formatArgs;
+  exports.save = save;
+  exports.load = load;
+  exports.useColors = useColors;
+  exports.storage = localstorage();
+  exports.destroy = (() => {
+    let warned2 = false;
+    return () => {
+      if (!warned2) {
+        warned2 = true;
+        console.warn("Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
+      }
+    };
+  })();
+  exports.colors = [
+    "#0000CC",
+    "#0000FF",
+    "#0033CC",
+    "#0033FF",
+    "#0066CC",
+    "#0066FF",
+    "#0099CC",
+    "#0099FF",
+    "#00CC00",
+    "#00CC33",
+    "#00CC66",
+    "#00CC99",
+    "#00CCCC",
+    "#00CCFF",
+    "#3300CC",
+    "#3300FF",
+    "#3333CC",
+    "#3333FF",
+    "#3366CC",
+    "#3366FF",
+    "#3399CC",
+    "#3399FF",
+    "#33CC00",
+    "#33CC33",
+    "#33CC66",
+    "#33CC99",
+    "#33CCCC",
+    "#33CCFF",
+    "#6600CC",
+    "#6600FF",
+    "#6633CC",
+    "#6633FF",
+    "#66CC00",
+    "#66CC33",
+    "#9900CC",
+    "#9900FF",
+    "#9933CC",
+    "#9933FF",
+    "#99CC00",
+    "#99CC33",
+    "#CC0000",
+    "#CC0033",
+    "#CC0066",
+    "#CC0099",
+    "#CC00CC",
+    "#CC00FF",
+    "#CC3300",
+    "#CC3333",
+    "#CC3366",
+    "#CC3399",
+    "#CC33CC",
+    "#CC33FF",
+    "#CC6600",
+    "#CC6633",
+    "#CC9900",
+    "#CC9933",
+    "#CCCC00",
+    "#CCCC33",
+    "#FF0000",
+    "#FF0033",
+    "#FF0066",
+    "#FF0099",
+    "#FF00CC",
+    "#FF00FF",
+    "#FF3300",
+    "#FF3333",
+    "#FF3366",
+    "#FF3399",
+    "#FF33CC",
+    "#FF33FF",
+    "#FF6600",
+    "#FF6633",
+    "#FF9900",
+    "#FF9933",
+    "#FFCC00",
+    "#FFCC33"
+  ];
+  function useColors() {
+    if (typeof window !== "undefined" && window.process && (window.process.type === "renderer" || window.process.__nwjs)) {
+      return true;
+    }
+    if (typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
+      return false;
+    }
+    let m2;
+    return typeof document !== "undefined" && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance || typeof window !== "undefined" && window.console && (window.console.firebug || window.console.exception && window.console.table) || typeof navigator !== "undefined" && navigator.userAgent && (m2 = navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/)) && parseInt(m2[1], 10) >= 31 || typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/);
+  }
+  function formatArgs(args) {
+    args[0] = (this.useColors ? "%c" : "") + this.namespace + (this.useColors ? " %c" : " ") + args[0] + (this.useColors ? "%c " : " ") + "+" + module.exports.humanize(this.diff);
+    if (!this.useColors) {
+      return;
+    }
+    const c2 = "color: " + this.color;
+    args.splice(1, 0, c2, "color: inherit");
+    let index = 0;
+    let lastC = 0;
+    args[0].replace(/%[a-zA-Z%]/g, (match) => {
+      if (match === "%%") {
+        return;
+      }
+      index++;
+      if (match === "%c") {
+        lastC = index;
+      }
+    });
+    args.splice(lastC, 0, c2);
+  }
+  exports.log = console.debug || console.log || (() => {});
+  function save(namespaces) {
+    try {
+      if (namespaces) {
+        exports.storage.setItem("debug", namespaces);
+      } else {
+        exports.storage.removeItem("debug");
+      }
+    } catch (error2) {}
+  }
+  function load() {
+    let r2;
+    try {
+      r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
+    } catch (error2) {}
+    if (!r2 && typeof process !== "undefined" && "env" in process) {
+      r2 = process.env.DEBUG;
+    }
+    return r2;
+  }
+  function localstorage() {
+    try {
+      return localStorage;
+    } catch (error2) {}
+  }
+  module.exports = require_common()(exports);
+  var { formatters } = module.exports;
+  formatters.j = function(v) {
+    try {
+      return JSON.stringify(v);
+    } catch (error2) {
+      return "[UnexpectedJSONParseError]: " + error2.message;
+    }
+  };
+});
+
 // src/main.tsx
-var import_react20 = __toESM(require_react(), 1);
+var import_react18 = __toESM(require_react(), 1);
 var import_client = __toESM(require_client(), 1);
 
 // src/components/layout/Sidebar.tsx
@@ -17526,261 +17971,6 @@ var createImpl = (createState) => {
   return useBoundStore;
 };
 var create = (createState) => createState ? createImpl(createState) : createImpl;
-
-// src/store/useStore.ts
-var DEFAULT_OBSERVER_POSITION = {
-  latitude: 45.6791709420156,
-  longitude: -0.5932216931856488,
-  baro_altitude: 50
-};
-var useStore2 = create((set) => ({
-  observerPosition: DEFAULT_OBSERVER_POSITION,
-  setObserverPosition: (position) => set({ observerPosition: position }),
-  flights: null,
-  setFlights: (flights) => set({ flights }),
-  selectedFlight: null,
-  setSelectedFlight: (flight) => set({ selectedFlight: flight }),
-  selectionMode: null,
-  setSelectionMode: (mode) => set({ selectionMode: mode }),
-  darkness: 0.5,
-  setDarkness: (darkness) => set({ darkness }),
-  controls: null,
-  setControls: (controls) => set({ controls })
-}));
-
-// src/components/layout/ObserverPositionForm.tsx
-var import_react2 = __toESM(require_react(), 1);
-var jsx_dev_runtime = __toESM(require_jsx_dev_runtime(), 1);
-var ObserverPositionForm = ({ onPositionUpdate }) => {
-  const observerPosition = useStore2((state) => state.observerPosition);
-  const setObserverPosition = useStore2((state) => state.setObserverPosition);
-  const [latitude, setLatitude] = import_react2.useState(observerPosition?.latitude || 0);
-  const [longitude, setLongitude] = import_react2.useState(observerPosition?.longitude || 0);
-  const [baroalt, setBaroalt] = import_react2.useState(observerPosition?.baro_altitude || 0);
-  const [isValid, setIsValid] = import_react2.useState(true);
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const lat = latitude;
-    const lon = longitude;
-    const baro_alt = baroalt;
-    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      setIsValid(false);
-      return;
-    }
-    setIsValid(true);
-    const newPosition = { latitude: lat, longitude: lon, baro_altitude: baro_alt };
-    setObserverPosition(newPosition);
-    if (onPositionUpdate) {
-      onPositionUpdate(newPosition);
-    }
-  };
-  return /* @__PURE__ */ jsx_dev_runtime.jsxDEV("form", {
-    onSubmit: handleSubmit,
-    className: "space-y-4",
-    children: [
-      /* @__PURE__ */ jsx_dev_runtime.jsxDEV("table", {
-        className: "w-full text-sm",
-        children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tbody", {
-          children: [
-            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
-              children: [
-                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
-                  className: "py-2 pr-4 text-right font-medium",
-                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
-                    htmlFor: "latitude",
-                    children: "Latitude"
-                  }, undefined, false, undefined, this)
-                }, undefined, false, undefined, this),
-                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
-                  className: "py-2",
-                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
-                    type: "text",
-                    id: "latitude",
-                    value: latitude,
-                    onChange: (e) => setLatitude(parseFloat(e.target.value)),
-                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
-                    placeholder: "e.g. 43.6047"
-                  }, undefined, false, undefined, this)
-                }, undefined, false, undefined, this)
-              ]
-            }, undefined, true, undefined, this),
-            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
-              children: [
-                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
-                  className: "py-2 pr-4 text-right font-medium",
-                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
-                    htmlFor: "longitude",
-                    children: "Longitude"
-                  }, undefined, false, undefined, this)
-                }, undefined, false, undefined, this),
-                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
-                  className: "py-2",
-                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
-                    type: "text",
-                    id: "longitude",
-                    value: longitude,
-                    onChange: (e) => setLongitude(parseFloat(e.target.value)),
-                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
-                    placeholder: "e.g. 1.4442"
-                  }, undefined, false, undefined, this)
-                }, undefined, false, undefined, this)
-              ]
-            }, undefined, true, undefined, this),
-            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
-              children: [
-                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
-                  className: "py-2 pr-4 text-right font-medium",
-                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
-                    htmlFor: "baroalt",
-                    children: "Altitude"
-                  }, undefined, false, undefined, this)
-                }, undefined, false, undefined, this),
-                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
-                  className: "py-2",
-                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
-                    type: "text",
-                    id: "baroalt",
-                    value: baroalt,
-                    onChange: (e) => setBaroalt(parseFloat(e.target.value)),
-                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
-                    placeholder: "e.g. 50"
-                  }, undefined, false, undefined, this)
-                }, undefined, false, undefined, this)
-              ]
-            }, undefined, true, undefined, this)
-          ]
-        }, undefined, true, undefined, this)
-      }, undefined, false, undefined, this),
-      !isValid && /* @__PURE__ */ jsx_dev_runtime.jsxDEV("p", {
-        className: "text-red-500 text-sm",
-        children: "Please enter valid GPS coordinates"
-      }, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime.jsxDEV("button", {
-        type: "submit",
-        className: "w-full bg-sidebar-primary text-sidebar-primary-foreground py-2 px-4 rounded-md hover:bg-opacity-90 transition-colors",
-        children: "Update Position"
-      }, undefined, false, undefined, this)
-    ]
-  }, undefined, true, undefined, this);
-};
-
-// src/components/layout/Sidebar.tsx
-var jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime(), 1);
-var Sidebar = () => {
-  const observerPosition = useStore2((state) => state.observerPosition);
-  const [darkTheme, setDarkTheme] = import_react3.useState(false);
-  const darkness = useStore2((state) => state.darkness);
-  const setDarkness = useStore2((state) => state.setDarkness);
-  const setSelectionMode = useStore2((state) => state.setSelectionMode);
-  const setSelectedFlight = useStore2((state) => state.setSelectedFlight);
-  const flights = useStore2((state) => state.flights);
-  import_react3.useEffect(() => {
-    if (darkTheme) {
-      document.body.classList.add("dark-theme");
-    } else {
-      document.body.classList.remove("dark-theme");
-    }
-  }, [darkTheme]);
-  const handleFlightSelect = (flight) => {
-    setSelectedFlight(flight);
-    setSelectionMode(null);
-  };
-  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-    className: "h-full sidebar text-sidebar-foreground p-4 z-10 col-span-1 dark-theme",
-    children: [
-      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-        className: "flex justify-between items-center mb-4",
-        children: [
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("h1", {
-            className: "text-xl font-bold",
-            children: "Earth Pointer"
-          }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
-            onClick: () => setDarkTheme(!darkTheme),
-            className: "accent text-sidebar-primary-foreground px-3 py-1 rounded-full text-sm hover:bg-opacity-80 transition-colors",
-            children: darkTheme ? "☀️" : "\uD83C\uDF19"
-          }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("input", {
-            type: "range",
-            min: "0",
-            max: "1",
-            step: "0.01",
-            value: darkness,
-            onChange: (e) => setDarkness(parseFloat(e.target.value)),
-            className: "absolute top-4 left-4 z-10 w-64"
-          }, undefined, false, undefined, this)
-        ]
-      }, undefined, true, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ObserverPositionForm, {}, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-        className: "mt-8",
-        children: [
-          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("h2", {
-            className: "text-lg font-semibold mb-2",
-            children: "Flights"
-          }, undefined, false, undefined, this),
-          !flights ? /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-            className: "flex items-center justify-center py-4",
-            children: [
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-                className: "animate-spin rounded-full h-8 w-8 border-b-2 border-sidebar-primary"
-              }, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
-                className: "ml-2",
-                children: "Loading flights..."
-              }, undefined, false, undefined, this)
-            ]
-          }, undefined, true, undefined, this) : /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-            className: "space-y-2 overflow-y-auto max-h-[50vh] sidebar-accent rounded-lg p-2",
-            children: Object.values(flights).map((flight) => /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
-              onClick: () => handleFlightSelect(flight),
-              className: "w-full text-left p-2 rounded flight-item hover:bg-sidebar-primary hover:bg-opacity-20 transition-colors",
-              children: [
-                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-                  className: "font-medium",
-                  children: flight.callsign.trim()
-                }, undefined, false, undefined, this),
-                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-                  className: "text-sm text-gray-400",
-                  children: [
-                    flight.latitude.toFixed(4),
-                    "°N, ",
-                    flight.longitude.toFixed(4),
-                    "°E"
-                  ]
-                }, undefined, true, undefined, this),
-                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
-                  className: "text-xs text-gray-500",
-                  children: [
-                    "Alt: ",
-                    Math.round(flight.baro_altitude),
-                    "m"
-                  ]
-                }, undefined, true, undefined, this)
-              ]
-            }, flight.callsign, true, undefined, this))
-          }, undefined, false, undefined, this)
-        ]
-      }, undefined, true, undefined, this)
-    ]
-  }, undefined, true, undefined, this);
-};
-
-// node_modules/@babel/runtime/helpers/esm/extends.js
-function _extends() {
-  return _extends = Object.assign ? Object.assign.bind() : function(n) {
-    for (var e = 1;e < arguments.length; e++) {
-      var t = arguments[e];
-      for (var r in t)
-        ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]);
-    }
-    return n;
-  }, _extends.apply(null, arguments);
-}
-
-// node_modules/@react-three/drei/web/Html.js
-var React5 = __toESM(require_react(), 1);
-var ReactDOM = __toESM(require_client(), 1);
 
 // node_modules/three/build/three.module.js
 var exports_three_module = {};
@@ -55364,6 +55554,417 @@ class WebGLRenderer {
   }
 }
 
+// src/utilities/unitConversions.ts
+var REAL_EARTH_RADIUS_KM = 6371;
+var SCENE_EARTH_RADIUS = 5;
+var scaleFactor = SCENE_EARTH_RADIUS / REAL_EARTH_RADIUS_KM;
+function kmToSceneUnits(km) {
+  return km * scaleFactor;
+}
+function metersToSceneUnits(meters) {
+  return kmToSceneUnits(meters / 1000);
+}
+
+// src/utilities/cameraUtils.ts
+function gpsToScenePosition(lat, lon, altitude_meters = 0) {
+  const latRad = MathUtils.degToRad(lat);
+  const lonRad = MathUtils.degToRad(lon);
+  const totalRadius = SCENE_EARTH_RADIUS + metersToSceneUnits(altitude_meters);
+  const x = totalRadius * Math.cos(latRad) * Math.sin(lonRad);
+  const y = totalRadius * Math.sin(latRad);
+  const z = totalRadius * Math.cos(latRad) * Math.cos(lonRad);
+  return new Vector3(x, y, z);
+}
+function focusCameraOnGPS(controls, lat, lon, alt = 5) {
+  const targetPosition = gpsToScenePosition(lat, lon, alt);
+  if (controls) {
+    controls.target.copy(targetPosition);
+    controls.update();
+  }
+  return targetPosition;
+}
+function animateCameraFocus(controls, targetPosition, duration = 1000) {
+  if (!controls)
+    return;
+  const startPosition = controls.target.clone();
+  const startTime = performance.now();
+  function animate() {
+    const elapsed = performance.now() - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easedProgress = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+    controls.target.lerpVectors(startPosition, targetPosition, easedProgress);
+    controls.update();
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+// src/store/useStore.ts
+function computeFlightsHash(flights) {
+  if (!flights)
+    return "";
+  const replacer = (key, value) => {
+    if (typeof value === "number") {
+      return Number(value.toFixed(10));
+    }
+    return value;
+  };
+  const str = JSON.stringify(flights, (k, v) => {
+    if (typeof v === "number")
+      return Number(v.toFixed(10));
+    return v;
+  });
+  let hash = 5381;
+  for (let i = 0;i < str.length; i++) {
+    hash = (hash << 5) + hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return (hash >>> 0).toString(16);
+}
+var DEFAULT_OBSERVER_POSITION = {
+  latitude: 43.633796109606884,
+  longitude: 1.436305522994527,
+  baro_altitude: 160
+};
+var useStore2 = create((set, get) => ({
+  observerPosition: DEFAULT_OBSERVER_POSITION,
+  setObserverPosition: (position) => set({ observerPosition: position }),
+  searchRadius: 20,
+  setSearchRadius: (radius) => set({ searchRadius: radius }),
+  flights: {},
+  flightsHash: "",
+  setFlights: (newFlights) => {
+    const newHash = computeFlightsHash(newFlights);
+    const currentSelectedFlight = get().selectedFlight;
+    const newSelectedFlight = currentSelectedFlight?.callsign ? newFlights[currentSelectedFlight.callsign.trim().toLocaleUpperCase()] : null;
+    set({
+      flights: newFlights,
+      flightsHash: newHash,
+      selectedFlight: newSelectedFlight
+    });
+  },
+  selectedFlight: null,
+  setSelectedFlight: (newSelectedFlight) => {
+    const cameraControls = get().controls;
+    if (cameraControls) {
+      focusCameraOnGPS(cameraControls, newSelectedFlight.latitude, newSelectedFlight.longitude, newSelectedFlight.baro_altitude / 1000);
+    }
+    set({ selectedFlight: newSelectedFlight });
+  },
+  selectionMode: null,
+  setSelectionMode: (mode) => set({ selectionMode: mode }),
+  darkness: 0.5,
+  setDarkness: (darkness) => set({ darkness }),
+  controls: null,
+  setControls: (controls) => set({ controls })
+}));
+
+// src/components/layout/ObserverPositionForm.tsx
+var import_react2 = __toESM(require_react(), 1);
+var jsx_dev_runtime = __toESM(require_jsx_dev_runtime(), 1);
+var ObserverPositionForm = ({ onFocusPosition }) => {
+  const observerPosition = useStore2((state) => state.observerPosition);
+  const setObserverPosition = useStore2((state) => state.setObserverPosition);
+  const cameraControls = useStore2((state) => state.controls);
+  const [latitude, setLatitude] = import_react2.useState(observerPosition?.latitude || 0);
+  const [longitude, setLongitude] = import_react2.useState(observerPosition?.longitude || 0);
+  const [baroalt, setBaroalt] = import_react2.useState(observerPosition?.baro_altitude || 0);
+  const [isValid, setIsValid] = import_react2.useState(true);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const lat = latitude;
+    const lon = longitude;
+    const baro_alt = baroalt;
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      setIsValid(false);
+      return;
+    }
+    setIsValid(true);
+    const newPosition = { latitude: lat, longitude: lon, baro_altitude: baro_alt };
+    setObserverPosition(newPosition);
+  };
+  return /* @__PURE__ */ jsx_dev_runtime.jsxDEV("form", {
+    onSubmit: handleSubmit,
+    className: "space-y-4",
+    children: [
+      /* @__PURE__ */ jsx_dev_runtime.jsxDEV("table", {
+        className: "w-full text-sm",
+        children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tbody", {
+          children: [
+            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
+              children: [
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2 pr-4 text-right font-medium",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
+                    htmlFor: "latitude",
+                    children: "Latitude"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
+                    type: "text",
+                    id: "latitude",
+                    value: latitude,
+                    onChange: (e) => setLatitude(parseFloat(e.target.value)),
+                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
+                    placeholder: "e.g. 43.6047"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this)
+              ]
+            }, undefined, true, undefined, this),
+            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
+              children: [
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2 pr-4 text-right font-medium",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
+                    htmlFor: "longitude",
+                    children: "Longitude"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
+                    type: "text",
+                    id: "longitude",
+                    value: longitude,
+                    onChange: (e) => setLongitude(parseFloat(e.target.value)),
+                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
+                    placeholder: "e.g. 1.4442"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this)
+              ]
+            }, undefined, true, undefined, this),
+            /* @__PURE__ */ jsx_dev_runtime.jsxDEV("tr", {
+              children: [
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2 pr-4 text-right font-medium",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("label", {
+                    htmlFor: "baroalt",
+                    children: "Altitude"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime.jsxDEV("td", {
+                  className: "py-2",
+                  children: /* @__PURE__ */ jsx_dev_runtime.jsxDEV("input", {
+                    type: "text",
+                    id: "baroalt",
+                    value: baroalt,
+                    onChange: (e) => setBaroalt(parseFloat(e.target.value)),
+                    className: `w-full px-3 py-2 border rounded-md ${!isValid ? "border-red-500" : "border-gray-300"}`,
+                    placeholder: "e.g. 50"
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this)
+              ]
+            }, undefined, true, undefined, this)
+          ]
+        }, undefined, true, undefined, this)
+      }, undefined, false, undefined, this),
+      !isValid && /* @__PURE__ */ jsx_dev_runtime.jsxDEV("p", {
+        className: "text-red-500 text-sm",
+        children: "Please enter valid GPS coordinates"
+      }, undefined, false, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime.jsxDEV("div", {
+        className: "flex gap-2",
+        children: [
+          /* @__PURE__ */ jsx_dev_runtime.jsxDEV("button", {
+            type: "submit",
+            className: "flex-1 bg-sidebar-primary text-sidebar-primary-foreground py-2 px-4 rounded-md hover:bg-opacity-90 transition-colors",
+            children: "Update Position"
+          }, undefined, false, undefined, this),
+          observerPosition && /* @__PURE__ */ jsx_dev_runtime.jsxDEV("button", {
+            type: "button",
+            onClick: () => {
+              if (!cameraControls) {
+                console.error("Camera controls not available - cannot focus on observer position");
+                return;
+              }
+              if (!observerPosition) {
+                console.error("Observer position not available - cannot focus camera");
+                return;
+              }
+              const targetPosition = focusCameraOnGPS(cameraControls, observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude);
+              animateCameraFocus(cameraControls, targetPosition, 1000);
+            },
+            className: "bg-sidebar-accent text-sidebar-accent-foreground py-2 px-4 rounded-md hover:bg-opacity-90 transition-colors flex items-center justify-center",
+            title: "Focus camera on observer position",
+            children: "\uD83D\uDCCD"
+          }, undefined, false, undefined, this)
+        ]
+      }, undefined, true, undefined, this)
+    ]
+  }, undefined, true, undefined, this);
+};
+
+// src/components/layout/Sidebar.tsx
+var jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime(), 1);
+var Sidebar = ({ controlsRef }) => {
+  const observerPosition = useStore2((state) => state.observerPosition);
+  const searchRadius = useStore2((state) => state.searchRadius);
+  const setSearchRadius = useStore2((state) => state.setSearchRadius);
+  const [darkTheme, setDarkTheme] = import_react3.useState(false);
+  const darkness = useStore2((state) => state.darkness);
+  const setDarkness = useStore2((state) => state.setDarkness);
+  const setSelectionMode = useStore2((state) => state.setSelectionMode);
+  const setSelectedFlight = useStore2((state) => state.setSelectedFlight);
+  const selectedFlight = useStore2((state) => state.selectedFlight);
+  const flights = useStore2((state) => state.flights);
+  import_react3.useEffect(() => {
+    if (darkTheme) {
+      document.body.classList.add("dark-theme");
+    } else {
+      document.body.classList.remove("dark-theme");
+    }
+  }, [darkTheme]);
+  const handleFlightSelect = (flight) => {
+    setSelectedFlight(flight);
+    setSelectionMode(null);
+  };
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+    className: "h-full sidebar text-sidebar-foreground p-4 z-10 col-span-1 dark-theme",
+    children: [
+      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+        className: "flex justify-between items-center mb-4",
+        children: [
+          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("h1", {
+            className: "text-xl font-bold",
+            children: "Earth Pointer"
+          }, undefined, false, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
+            onClick: () => setDarkTheme(!darkTheme),
+            className: "accent text-sidebar-primary-foreground px-3 py-1 rounded-full text-sm hover:bg-opacity-80 transition-colors",
+            children: darkTheme ? "☀️" : "\uD83C\uDF19"
+          }, undefined, false, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("input", {
+            type: "range",
+            min: "0",
+            max: "1",
+            step: "0.01",
+            value: darkness,
+            onChange: (e) => setDarkness(parseFloat(e.target.value)),
+            className: "absolute top-4 left-4 z-10 w-64"
+          }, undefined, false, undefined, this)
+        ]
+      }, undefined, true, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ObserverPositionForm, {}, undefined, false, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+        className: "mt-6",
+        children: [
+          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("label", {
+            className: "block text-sm font-medium mb-2",
+            children: [
+              "Search Radius: ",
+              searchRadius,
+              " km"
+            ]
+          }, undefined, true, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("input", {
+            type: "range",
+            min: "0",
+            max: "100",
+            step: "5",
+            value: searchRadius,
+            onChange: (e) => setSearchRadius(parseFloat(e.target.value)),
+            className: "w-full h-2 bg-sidebar-accent rounded-lg appearance-none cursor-pointer"
+          }, undefined, false, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+            className: "flex justify-between text-xs text-sidebar-foreground/60 mt-1",
+            children: [
+              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+                children: "1 km"
+              }, undefined, false, undefined, this),
+              /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+                children: "100 km"
+              }, undefined, false, undefined, this)
+            ]
+          }, undefined, true, undefined, this)
+        ]
+      }, undefined, true, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+        className: "mt-8",
+        children: !flights ? /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+          className: "flex items-center justify-center py-4",
+          children: [
+            /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+              className: "animate-spin rounded-full h-8 w-8 border-b-2 border-sidebar-primary"
+            }, undefined, false, undefined, this),
+            /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+              className: "ml-2",
+              children: "Loading flights..."
+            }, undefined, false, undefined, this)
+          ]
+        }, undefined, true, undefined, this) : /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(jsx_dev_runtime2.Fragment, {
+          children: [
+            selectedFlight ? /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(jsx_dev_runtime2.Fragment, {
+              children: [
+                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("h2", {
+                  children: selectedFlight.callsign
+                }, undefined, false, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+                  className: "text-sm text-gray-400",
+                  children: [
+                    selectedFlight.latitude.toFixed(4),
+                    "°N, ",
+                    selectedFlight.longitude.toFixed(4),
+                    "°E"
+                  ]
+                }, undefined, true, undefined, this),
+                /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+                  children: [
+                    selectedFlight.baro_altitude_km.toFixed(3),
+                    " km"
+                  ]
+                }, undefined, true, undefined, this)
+              ]
+            }, undefined, true, undefined, this) : /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("h2", {
+              children: "Select a flight to start"
+            }, undefined, false, undefined, this),
+            /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+              className: "space-y-2 overflow-y-auto max-h-[50vh] sidebar-accent rounded-lg p-2",
+              children: Object.values(flights).map((flight) => /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("button", {
+                onClick: () => handleFlightSelect(flight),
+                className: "w-full text-left p-2 rounded flight-item hover:bg-sidebar-primary hover:bg-opacity-20 transition-colors",
+                children: [
+                  /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+                    className: "font-medium",
+                    children: flight.callsign.trim()
+                  }, undefined, false, undefined, this),
+                  /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("div", {
+                    className: "text-xs text-gray-500",
+                    children: [
+                      "Alt: ",
+                      Math.round(flight.baro_altitude),
+                      "m"
+                    ]
+                  }, undefined, true, undefined, this)
+                ]
+              }, flight.callsign, true, undefined, this))
+            }, undefined, false, undefined, this)
+          ]
+        }, undefined, true, undefined, this)
+      }, undefined, false, undefined, this)
+    ]
+  }, undefined, true, undefined, this);
+};
+
+// node_modules/@babel/runtime/helpers/esm/extends.js
+function _extends() {
+  return _extends = Object.assign ? Object.assign.bind() : function(n) {
+    for (var e = 1;e < arguments.length; e++) {
+      var t = arguments[e];
+      for (var r in t)
+        ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]);
+    }
+    return n;
+  }, _extends.apply(null, arguments);
+}
+
+// node_modules/@react-three/drei/web/Html.js
+var React5 = __toESM(require_react(), 1);
+var ReactDOM = __toESM(require_client(), 1);
+
 // node_modules/@react-three/fiber/dist/events-156d8d12.esm.js
 var React3 = __toESM(require_react(), 1);
 var import_react5 = __toESM(require_react(), 1);
@@ -73080,62 +73681,14 @@ var Stars = /* @__PURE__ */ React8.forwardRef(({
   }));
 });
 // src/components/layout/MainScene.tsx
-var import_react17 = __toESM(require_react(), 1);
+var import_react16 = __toESM(require_react(), 1);
 
 // src/components/AirplaneMarker.tsx
 var import_react7 = __toESM(require_react(), 1);
-
-// src/utilities/unitConversions.ts
-var REAL_EARTH_RADIUS_KM = 6371;
-var SCENE_EARTH_RADIUS = 5;
-var scaleFactor = SCENE_EARTH_RADIUS / REAL_EARTH_RADIUS_KM;
-function kmToSceneUnits(km) {
-  return km * scaleFactor;
-}
-function metersToSceneUnits(meters) {
-  return kmToSceneUnits(meters / 1000);
-}
-
-// src/utilities/cameraUtils.ts
-function gpsToScenePosition(lat, lon, altitude_meters = 0) {
-  const latRad = MathUtils.degToRad(lat);
-  const lonRad = MathUtils.degToRad(lon);
-  const totalRadius = SCENE_EARTH_RADIUS + metersToSceneUnits(altitude_meters);
-  const x2 = totalRadius * Math.cos(latRad) * Math.sin(lonRad);
-  const y = totalRadius * Math.sin(latRad);
-  const z = totalRadius * Math.cos(latRad) * Math.cos(lonRad);
-  return new Vector3(x2, y, z);
-}
-function focusCameraOnGPS(controls, lat, lon, alt = 5) {
-  const targetPosition = gpsToScenePosition(lat, lon, alt);
-  if (controls) {
-    controls.target.copy(targetPosition);
-    controls.update();
-  }
-  return targetPosition;
-}
-function animateCameraFocus(controls, targetPosition, duration = 1000) {
-  if (!controls)
-    return;
-  const startPosition = controls.target.clone();
-  const startTime = performance.now();
-  function animate() {
-    const elapsed = performance.now() - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const easedProgress = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-    controls.target.lerpVectors(startPosition, targetPosition, easedProgress);
-    controls.update();
-    if (progress < 1) {
-      requestAnimationFrame(animate);
-    }
-  }
-  requestAnimationFrame(animate);
-}
-
-// src/components/AirplaneMarker.tsx
 var jsx_dev_runtime3 = __toESM(require_jsx_dev_runtime(), 1);
 var AirplaneMarker = () => {
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
+  const setSelectedFlight = useStore2((state2) => state2.setSelectedFlight);
   const flights = useStore2((state2) => state2.flights);
   const controls = useStore2((state2) => state2.controls);
   const computeFlightPosVector = import_react7.useCallback((flight) => {
@@ -73153,9 +73706,6 @@ var AirplaneMarker = () => {
     const flightPos = new Vector3(x2, y, z);
     const q = new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), flightPos.clone().negate().normalize());
     const textPos = flightPos.clone().normalize().multiplyScalar(metersToSceneUnits(1e4));
-    if (flight.callsign === selectedFlight?.callsign && controls) {
-      animateCameraFocus(controls, textPos);
-    }
     const geometry = new BufferGeometry().setFromPoints([new Vector3(0, 0, 0), textPos]);
     const material = new LineBasicMaterial({ color: 16776960, linewidth: 2 });
     const connectionLine = new Line(geometry, material);
@@ -73183,6 +73733,11 @@ var AirplaneMarker = () => {
         children: [
           /* @__PURE__ */ jsx_dev_runtime3.jsxDEV("mesh", {
             renderOrder: isSelectedFlight ? 2 : 0,
+            onClick: (e2) => {
+              e2.stopPropagation();
+              setSelectedFlight(flight);
+              console.log("meshonclick");
+            },
             children: [
               /* @__PURE__ */ jsx_dev_runtime3.jsxDEV("sphereGeometry", {
                 args: [kmToSceneUnits(1), 32, 32]
@@ -73201,24 +73756,32 @@ var AirplaneMarker = () => {
             position: textPos,
             quaternion: q,
             distanceFactor: 0.1,
-            style: {
-              color: isSelectedFlight ? "#38bdf8" : "white",
-              fontSize: "14px",
-              fontFamily: "sans-serif",
-              background: "rgba(0,0,0,0.5)",
-              padding: "4px 8px",
-              borderRadius: "4px",
-              margin: 0,
-              transform: "translate(-50%, -50%)",
-              zIndex: isSelectedFlight ? 100 : "inherit",
-              pointerEvents: "none"
-            },
-            children: flight.callsign
+            style: { pointerEvents: "none" },
+            children: /* @__PURE__ */ jsx_dev_runtime3.jsxDEV("div", {
+              onClick: (e2) => {
+                e2.stopPropagation();
+                setSelectedFlight(flight);
+              },
+              style: {
+                color: isSelectedFlight ? "#38bdf8" : "white",
+                fontSize: "14px",
+                fontFamily: "sans-serif",
+                background: "rgba(0,0,0,0.5)",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                margin: 0,
+                transform: "translate(-50%, -50%)",
+                zIndex: isSelectedFlight ? 100 : "inherit",
+                pointerEvents: "auto",
+                cursor: "pointer"
+              },
+              children: flight.callsign
+            }, undefined, false, undefined, this)
           }, undefined, false, undefined, this)
         ]
       }, undefined, true, undefined, this);
     });
-  }, [computeFlightPosVector, flights, selectedFlight?.callsign]);
+  }, [computeFlightPosVector, flights, selectedFlight?.callsign, setSelectedFlight]);
   if (!flights)
     return null;
   return markers;
@@ -73232,11 +73795,15 @@ var SEGMENTS = 48;
 var AzimuthAngleOverlay = () => {
   const observerPosition = useStore2((state2) => state2.observerPosition);
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
+  const flights = useStore2((state2) => state2.flights);
   const overlay = import_react8.useMemo(() => {
     if (!observerPosition || !selectedFlight)
       return null;
+    const currentSelectedFlight = flights[selectedFlight.callsign.trim().toLocaleUpperCase()];
+    if (!currentSelectedFlight)
+      return null;
     const observerPoint = gpsToScenePosition(observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude);
-    const flightPoint = gpsToScenePosition(selectedFlight.latitude, selectedFlight.longitude, selectedFlight.baro_altitude);
+    const flightPoint = gpsToScenePosition(currentSelectedFlight.latitude, currentSelectedFlight.longitude, currentSelectedFlight.baro_altitude);
     const up = observerPoint.clone().normalize();
     const north = NORTH_POLE.clone().sub(up.clone().multiplyScalar(NORTH_POLE.dot(up))).normalize();
     const east = new Vector3().crossVectors(north, up).normalize();
@@ -73298,7 +73865,7 @@ var AzimuthAngleOverlay = () => {
       verticalSectorGeometry,
       actualFlightRayGeometry
     };
-  }, [observerPosition, selectedFlight]);
+  }, [observerPosition, selectedFlight, flights]);
   if (!overlay)
     return null;
   return /* @__PURE__ */ jsx_dev_runtime4.jsxDEV("group", {
@@ -73320,14 +73887,6 @@ var AzimuthAngleOverlay = () => {
           opacity: 0.3,
           side: DoubleSide
         }, undefined, false, undefined, this)
-      }, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime4.jsxDEV("line", {
-        geometry: overlay.actualFlightRayGeometry,
-        children: /* @__PURE__ */ jsx_dev_runtime4.jsxDEV("lineBasicMaterial", {
-          color: "#ef4444",
-          transparent: true,
-          opacity: 0.9
-        }, undefined, false, undefined, this)
       }, undefined, false, undefined, this)
     ]
   }, undefined, true, undefined, this);
@@ -73339,17 +73898,22 @@ var jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime(), 1);
 var ConnectionLine = () => {
   const observerPosition = useStore2((state2) => state2.observerPosition);
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
+  const flightsHash = useStore2((state2) => state2.flightsHash);
+  const flights = useStore2((state2) => state2.flights);
   const line = import_react9.useMemo(() => {
-    if (observerPosition && selectedFlight) {
+    if (observerPosition && selectedFlight && flights && selectedFlight != null) {
       const observerPoint = gpsToScenePosition(observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude);
-      const flightPoint = gpsToScenePosition(selectedFlight.latitude, selectedFlight.longitude, selectedFlight.baro_altitude);
+      const currentSelectedFlight = flights[selectedFlight.callsign.trim()];
+      if (!currentSelectedFlight)
+        return null;
+      const flightPoint = gpsToScenePosition(currentSelectedFlight.latitude, currentSelectedFlight.longitude, currentSelectedFlight.baro_altitude);
       const points = [observerPoint, flightPoint];
       const geometry = new BufferGeometry().setFromPoints(points);
       const material = new LineBasicMaterial({ color: 16776960, linewidth: 2 });
       const newLine = new Line(geometry, material);
       return newLine;
     }
-  }, [observerPosition, selectedFlight]);
+  }, [observerPosition, selectedFlight, flights, flightsHash]);
   if (!line)
     return null;
   return /* @__PURE__ */ jsx_dev_runtime5.jsxDEV("primitive", {
@@ -73537,204 +74101,108 @@ var ObserverMarker = () => {
   }, undefined, true, undefined, this);
 };
 
-// src/components/SpinningEarth.tsx
-var import_react14 = __toESM(require_react(), 1);
-
-// src/utilities/conversions.ts
-var twoPies = Math.PI * 2;
-function degToRadian(degrees) {
-  return degrees / 360 * twoPies;
-}
-
-// src/components/AxesHelper.tsx
+// src/components/layout/AngleDisplay.tsx
 var import_react13 = __toESM(require_react(), 1);
 
-// node_modules/three/src/math/MathUtils.js
-var DEG2RAD2 = Math.PI / 180;
-var RAD2DEG2 = 180 / Math.PI;
-function degToRad2(degrees) {
-  return degrees * DEG2RAD2;
-}
-
-// src/components/AxesHelper.tsx
-var jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime(), 1);
-var AXIS_RADIUS = 10;
-var axisConfig = [
-  { direction: [1, 0, 0], color: "red", label: "X" },
-  { direction: [0, 1, 0], color: "green", label: "Y" },
-  { direction: [0, 0, 1], color: "blue", label: "Z" }
-];
-var AxesHelper2 = () => {
-  return /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("group", {
-    children: axisConfig.map((axis) => /* @__PURE__ */ jsx_dev_runtime9.jsxDEV(Axis, {
-      direction: axis.direction,
-      color: axis.color,
-      label: axis.label,
-      length: AXIS_RADIUS
-    }, axis.label, false, undefined, this))
-  }, undefined, false, undefined, this);
-};
-var Axis = ({ direction, color, label, length }) => {
-  const [dx, dy, dz] = direction;
-  const tipPosition = [
-    dx * length,
-    dy * length,
-    dz * length
-  ];
-  const line = import_react13.useMemo(() => {
-    const points = [
-      new Vector3(0, 0, 0),
-      new Vector3(dx * length, dy * length, dz * length)
-    ];
-    const geometry = new BufferGeometry().setFromPoints(points);
-    const material = new LineBasicMaterial({ color, linewidth: 2 });
-    return new Line(geometry, material);
-  }, [dx, dy, dz, length, color]);
-  const coneRotation = import_react13.useMemo(() => {
-    if (dx === 1) {
-      return [0, 0, degToRadian(90)];
-    } else if (dx === -1) {
-      return [0, 0, degToRadian(90 + 180)];
-    } else if (dy === 1) {
-      return [degToRad2(180), 0, 0];
-    } else if (dy === -1) {
-      return [0, 0, 0];
-    } else if (dz === 1) {
-      return [degToRad2(-90), 0, 0];
-    } else if (dz === -1) {
-      return [degToRad2(90), 0, 0];
-    }
-    return [0, 0, 0];
-  }, [dx, dy, dz]);
-  const labelPosition = import_react13.useMemo(() => [
-    dx * (length - 0.8),
-    dy * (length - 0.8),
-    dz * (length - 0.8)
-  ], [dx, dy, dz, length]);
-  return /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("group", {
-    children: [
-      /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("primitive", {
-        object: line
-      }, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("mesh", {
-        position: tipPosition,
-        rotation: coneRotation,
-        children: [
-          /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("coneGeometry", {
-            args: [kmToSceneUnits(100), kmToSceneUnits(200), 32]
-          }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("meshStandardMaterial", {
-            color
-          }, undefined, false, undefined, this)
-        ]
-      }, undefined, true, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime9.jsxDEV(Label, {
-        position: labelPosition,
-        rotation: coneRotation,
-        color,
-        text: label
-      }, undefined, false, undefined, this)
-    ]
-  }, undefined, true, undefined, this);
-};
-var Label = ({ position, color, text, rotation }) => {
-  return /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("group", {
-    position,
-    children: [
-      /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("mesh", {
-        position: [0, 0, -0.01],
-        rotation,
-        children: [
-          /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("circleGeometry", {
-            args: [kmToSceneUnits(100), 32, 0, Math.PI * 2]
-          }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("meshStandardMaterial", {
-            color,
-            side: DoubleSide
-          }, undefined, false, undefined, this)
-        ]
-      }, undefined, true, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime9.jsxDEV(Text2, {
-        position: [0, 0, 0.01],
-        rotation,
-        fontSize: 0.4,
-        color: "white",
-        anchorX: "center",
-        anchorY: "middle",
-        children: text
-      }, undefined, false, undefined, this)
-    ]
-  }, undefined, true, undefined, this);
-};
-
-// src/components/SpinningEarth.tsx
-var jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime(), 1);
-var SpinningEarth = ({ children }) => {
-  const earthRef = import_react14.useRef(null);
-  useFrame(() => {
-    if (earthRef.current) {}
-  });
-  return /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("group", {
-    ref: earthRef,
-    children: [
-      /* @__PURE__ */ jsx_dev_runtime10.jsxDEV(AxesHelper2, {}, undefined, false, undefined, this),
-      children
-    ]
-  }, undefined, true, undefined, this);
-};
-
-// src/components/layout/AngleDisplay.tsx
-var import_react15 = __toESM(require_react(), 1);
-var jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime(), 1);
+// src/utilities/angleUtils.ts
 var NORTH_POLE2 = new Vector3(0, SCENE_EARTH_RADIUS, 0);
-var formatAngle = (radians) => {
+function computeAngles(observer, target) {
+  const observerPoint = gpsToScenePosition(observer.latitude, observer.longitude, observer.baro_altitude);
+  const targetPoint = gpsToScenePosition(target.latitude, target.longitude, target.baro_altitude);
+  const up = observerPoint.clone().normalize();
+  const north = NORTH_POLE2.clone().sub(up.clone().multiplyScalar(NORTH_POLE2.dot(up))).normalize();
+  const east = new Vector3().crossVectors(north, up).normalize();
+  const toTarget = targetPoint.clone().sub(observerPoint);
+  const horizontalTargetDirection = toTarget.clone().sub(up.clone().multiplyScalar(toTarget.dot(up))).normalize();
+  const azimuth = Math.atan2(horizontalTargetDirection.dot(east), horizontalTargetDirection.dot(north));
+  const vertical = Math.asin(toTarget.clone().normalize().dot(up));
+  return {
+    signedAzimuth: azimuth,
+    verticalAngle: vertical
+  };
+}
+function formatAngle(radians) {
   const degrees = MathUtils.radToDeg(radians);
   return `${degrees > 0 ? "+" : ""}${degrees.toFixed(1)}°`;
-};
+}
+
+// src/services/serialService.ts
+var API_BASE = "/api";
+
+class ApiError extends Error {
+  statusCode;
+  response;
+  constructor(message, statusCode, response) {
+    super(message);
+    this.statusCode = statusCode;
+    this.response = response;
+    this.name = "ApiError";
+  }
+}
+async function handleFetch(response, context2) {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(`${context2}: ${response.statusText}`, response.status, errorData);
+  }
+  return response.json();
+}
+async function sendMovetoCommand(params) {
+  const roundedParams = {
+    azimuth: parseFloat(params.azimuth.toFixed(2)),
+    elevation: parseFloat(params.elevation.toFixed(2))
+  };
+  const response = await fetch(`${API_BASE}/serial/moveto`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: roundedParams })
+  });
+  return handleFetch(response, "Failed to send moveto command");
+}
+
+// src/components/layout/AngleDisplay.tsx
+var jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime(), 1);
 var AngleDisplay = () => {
   const observerPosition = useStore2((state2) => state2.observerPosition);
   const selectedFlight = useStore2((state2) => state2.selectedFlight);
-  const { signedAzimuth, verticalAngle } = import_react15.useMemo(() => {
+  const { signedAzimuth, verticalAngle } = import_react13.useMemo(() => {
     if (!observerPosition || !selectedFlight) {
       return { signedAzimuth: 0, verticalAngle: 0 };
     }
-    const observerPoint = gpsToScenePosition(observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude);
-    const flightPoint = gpsToScenePosition(selectedFlight.latitude, selectedFlight.longitude, selectedFlight.baro_altitude);
-    const up = observerPoint.clone().normalize();
-    const north = NORTH_POLE2.clone().sub(up.clone().multiplyScalar(NORTH_POLE2.dot(up))).normalize();
-    const east = new Vector3().crossVectors(north, up).normalize();
-    const toFlight = flightPoint.clone().sub(observerPoint);
-    const horizontalFlightDirection = toFlight.clone().sub(up.clone().multiplyScalar(toFlight.dot(up))).normalize();
-    const azimuth = Math.atan2(horizontalFlightDirection.dot(east), horizontalFlightDirection.dot(north));
-    const vertical = Math.asin(toFlight.clone().normalize().dot(up));
-    return { signedAzimuth: azimuth, verticalAngle: vertical };
-  }, [observerPosition, selectedFlight]);
+    const angles = computeAngles(observerPosition, selectedFlight);
+    const formatedAngles = {
+      signedAzimuth: formatAngle(angles.signedAzimuth),
+      verticalAngle: formatAngle(angles.verticalAngle)
+    };
+    console.log("LTES - selectedFlight", selectedFlight);
+    sendMovetoCommand({ azimuth: parseFloat(formatedAngles.signedAzimuth), elevation: parseFloat(formatedAngles.verticalAngle) });
+    return formatedAngles;
+  }, [selectedFlight]);
   if (!observerPosition || !selectedFlight)
     return null;
-  return /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("div", {
+  return /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("div", {
     className: "bg-black/70 text-white p-2 rounded text-xs font-mono",
     children: [
-      /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("div", {
+      /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("div", {
         children: [
-          /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("span", {
+          /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("span", {
             style: { color: "#facc15" },
             children: "Azimuth: "
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("span", {
+          /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("span", {
             style: { color: "#facc15" },
-            children: formatAngle(signedAzimuth)
+            children: signedAzimuth
           }, undefined, false, undefined, this)
         ]
       }, undefined, true, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("div", {
+      /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("div", {
         children: [
-          /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("span", {
+          /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("span", {
             style: { color: "#38bdf8" },
             children: "Vertical: "
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("span", {
+          /* @__PURE__ */ jsx_dev_runtime9.jsxDEV("span", {
             style: { color: "#38bdf8" },
-            children: formatAngle(verticalAngle)
+            children: verticalAngle
           }, undefined, false, undefined, this)
         ]
       }, undefined, true, undefined, this)
@@ -73743,8 +74211,8 @@ var AngleDisplay = () => {
 };
 
 // src/components/layout/HumidityVisibilityDisplay.tsx
-var import_react16 = __toESM(require_react(), 1);
-var jsx_dev_runtime12 = __toESM(require_jsx_dev_runtime(), 1);
+var import_react14 = __toESM(require_react(), 1);
+var jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime(), 1);
 var TOULOUSE_VISIBILITY_DATA = {
   January: { humidity_percent: [83, 87], visibility_km: [8, 12] },
   February: { humidity_percent: [79, 85], visibility_km: [10, 15] },
@@ -73774,31 +74242,31 @@ var MONTH_NAMES = [
   "December"
 ];
 var HumidityVisibilityDisplay = () => {
-  const currentMonth = import_react16.useMemo(() => {
+  const currentMonth = import_react14.useMemo(() => {
     const date = new Date;
     return MONTH_NAMES[date.getMonth()];
   }, []);
-  const monthData = import_react16.useMemo(() => {
+  const monthData = import_react14.useMemo(() => {
     return TOULOUSE_VISIBILITY_DATA[currentMonth];
   }, [currentMonth]);
   if (!monthData)
     return null;
-  return /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("div", {
+  return /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("div", {
     className: "bg-black/70 text-white p-2 rounded text-xs font-mono",
     children: [
-      /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("div", {
-        children: /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("span", {
+      /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("div", {
+        children: /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("span", {
           className: "text-gray-300",
           children: currentMonth
         }, undefined, false, undefined, this)
       }, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("div", {
+      /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("div", {
         children: [
-          /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("span", {
+          /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("span", {
             className: "text-orange-400",
             children: "Humidity: "
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("span", {
+          /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("span", {
             className: "text-orange-400",
             children: [
               monthData.humidity_percent[0],
@@ -73809,13 +74277,13 @@ var HumidityVisibilityDisplay = () => {
           }, undefined, true, undefined, this)
         ]
       }, undefined, true, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("div", {
+      /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("div", {
         children: [
-          /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("span", {
+          /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("span", {
             className: "text-green-400",
             children: "Visibility: "
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("span", {
+          /* @__PURE__ */ jsx_dev_runtime10.jsxDEV("span", {
             className: "text-green-400",
             children: [
               monthData.visibility_km[0],
@@ -73831,7 +74299,7 @@ var HumidityVisibilityDisplay = () => {
 };
 
 // src/components/layout/ZoomControl.tsx
-var jsx_dev_runtime13 = __toESM(require_jsx_dev_runtime(), 1);
+var jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime(), 1);
 var ZoomControl = ({
   controlsRef,
   zoomStep = 5
@@ -73861,20 +74329,20 @@ var ZoomControl = ({
       controlsRef.current.update();
     }
   };
-  return /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("div", {
+  return /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("div", {
     className: "bg-black/70 text-white p-2 rounded flex gap-2 items-center",
     children: [
-      /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("button", {
+      /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("button", {
         onClick: handleZoomIn,
         className: "px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm font-mono transition-colors",
         children: "+"
       }, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("button", {
+      /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("button", {
         onClick: handleZoomOut,
         className: "px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm font-mono transition-colors",
         children: "-"
       }, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("button", {
+      /* @__PURE__ */ jsx_dev_runtime11.jsxDEV("button", {
         onClick: handleReset,
         className: "px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm font-mono transition-colors",
         children: "Reset"
@@ -73883,10 +74351,158 @@ var ZoomControl = ({
   }, undefined, true, undefined, this);
 };
 
+// src/utilities/conversions.ts
+var twoPies = Math.PI * 2;
+function degToRadian(degrees) {
+  return degrees / 360 * twoPies;
+}
+
+// src/components/AxesHelper.tsx
+var import_react15 = __toESM(require_react(), 1);
+
+// node_modules/three/src/math/MathUtils.js
+var DEG2RAD2 = Math.PI / 180;
+var RAD2DEG2 = 180 / Math.PI;
+function degToRad2(degrees) {
+  return degrees * DEG2RAD2;
+}
+
+// src/components/AxesHelper.tsx
+var jsx_dev_runtime12 = __toESM(require_jsx_dev_runtime(), 1);
+var AXIS_RADIUS = 10;
+var axisConfig = [
+  { direction: [1, 0, 0], color: "red", label: "X" },
+  { direction: [0, 1, 0], color: "green", label: "Y" },
+  { direction: [0, 0, 1], color: "blue", label: "Z" }
+];
+var AxesHelper2 = () => {
+  return /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("group", {
+    children: axisConfig.map((axis) => /* @__PURE__ */ jsx_dev_runtime12.jsxDEV(Axis, {
+      direction: axis.direction,
+      color: axis.color,
+      label: axis.label,
+      length: AXIS_RADIUS
+    }, axis.label, false, undefined, this))
+  }, undefined, false, undefined, this);
+};
+var Axis = ({ direction, color, label, length }) => {
+  const [dx, dy, dz] = direction;
+  const tipPosition = [
+    dx * length,
+    dy * length,
+    dz * length
+  ];
+  const line = import_react15.useMemo(() => {
+    const points = [
+      new Vector3(0, 0, 0),
+      new Vector3(dx * length, dy * length, dz * length)
+    ];
+    const geometry = new BufferGeometry().setFromPoints(points);
+    const material = new LineBasicMaterial({ color, linewidth: 2 });
+    return new Line(geometry, material);
+  }, [dx, dy, dz, length, color]);
+  const coneRotation = import_react15.useMemo(() => {
+    if (dx === 1) {
+      return [0, 0, degToRadian(90)];
+    } else if (dx === -1) {
+      return [0, 0, degToRadian(90 + 180)];
+    } else if (dy === 1) {
+      return [degToRad2(180), 0, 0];
+    } else if (dy === -1) {
+      return [0, 0, 0];
+    } else if (dz === 1) {
+      return [degToRad2(-90), 0, 0];
+    } else if (dz === -1) {
+      return [degToRad2(90), 0, 0];
+    }
+    return [0, 0, 0];
+  }, [dx, dy, dz]);
+  const labelPosition = import_react15.useMemo(() => [
+    dx * (length - 0.8),
+    dy * (length - 0.8),
+    dz * (length - 0.8)
+  ], [dx, dy, dz, length]);
+  return /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("group", {
+    children: [
+      /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("primitive", {
+        object: line
+      }, undefined, false, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("mesh", {
+        position: tipPosition,
+        rotation: coneRotation,
+        children: [
+          /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("coneGeometry", {
+            args: [kmToSceneUnits(100), kmToSceneUnits(200), 32]
+          }, undefined, false, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("meshStandardMaterial", {
+            color
+          }, undefined, false, undefined, this)
+        ]
+      }, undefined, true, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime12.jsxDEV(Label, {
+        position: labelPosition,
+        rotation: coneRotation,
+        color,
+        text: label
+      }, undefined, false, undefined, this)
+    ]
+  }, undefined, true, undefined, this);
+};
+var Label = ({ position, color, text, rotation }) => {
+  return /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("group", {
+    position,
+    children: [
+      /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("mesh", {
+        position: [0, 0, -0.01],
+        rotation,
+        children: [
+          /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("circleGeometry", {
+            args: [kmToSceneUnits(100), 32, 0, Math.PI * 2]
+          }, undefined, false, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime12.jsxDEV("meshStandardMaterial", {
+            color,
+            side: DoubleSide
+          }, undefined, false, undefined, this)
+        ]
+      }, undefined, true, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime12.jsxDEV(Text2, {
+        position: [0, 0, 0.01],
+        rotation,
+        fontSize: 0.4,
+        color: "white",
+        anchorX: "center",
+        anchorY: "middle",
+        children: text
+      }, undefined, false, undefined, this)
+    ]
+  }, undefined, true, undefined, this);
+};
+
 // src/components/layout/MainScene.tsx
-var jsx_dev_runtime14 = __toESM(require_jsx_dev_runtime(), 1);
+var jsx_dev_runtime13 = __toESM(require_jsx_dev_runtime(), 1);
+var EarthMesh = ({ children }) => {
+  const earthRef = import_react16.useRef(null);
+  const earthTexture = useLoader(TextureLoader, "assets/3d/textures/world.200401.3x21600x10800.jpg");
+  return /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("group", {
+    children: [
+      /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(AxesHelper2, {}, undefined, false, undefined, this),
+      children,
+      /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("mesh", {
+        rotation: [0, Math.PI / 2 * 3, 0],
+        children: [
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("sphereGeometry", {
+            args: [5, 128, 128]
+          }, undefined, false, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("meshBasicMaterial", {
+            map: earthTexture
+          }, undefined, false, undefined, this)
+        ]
+      }, undefined, true, undefined, this)
+    ]
+  }, undefined, true, undefined, this);
+};
 var GradientBackground = ({ darknessMultiplier }) => {
-  const texture = import_react17.useMemo(() => {
+  const texture = import_react16.useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 2;
     canvas.height = 512;
@@ -73907,59 +74523,31 @@ var GradientBackground = ({ darknessMultiplier }) => {
     texture2.magFilter = LinearFilter;
     return texture2;
   }, [darknessMultiplier]);
-  import_react17.useEffect(() => {
+  import_react16.useEffect(() => {
     return () => {
       texture.dispose();
     };
   }, [texture]);
-  return /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("primitive", {
+  return /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("primitive", {
     attach: "background",
     object: texture
   }, undefined, false, undefined, this);
 };
-var MainScene = () => {
-  const observerPosition = useStore2((state2) => state2.observerPosition);
-  const selectedFlight = useStore2((state2) => state2.selectedFlight);
-  const mode = useStore2((state2) => state2.selectionMode);
+var MainScene = ({ controlsRef }) => {
   const darkness = useStore2((state2) => state2.darkness);
   const setControls = useStore2((state2) => state2.setControls);
-  const controlsRef = import_react17.useRef(null);
-  import_react17.useEffect(() => {
+  import_react16.useEffect(() => {
     if (controlsRef.current) {
       setControls(controlsRef.current);
     }
-  }, [setControls, controlsRef]);
-  import_react17.useEffect(() => {
-    if (controlsRef.current) {
-      const timer2 = setTimeout(() => {
-        if (mode === "airplane" && selectedFlight) {
-          console.log("mode === 'airplane' && selectedFlight", mode === "airplane" && selectedFlight);
-          animateCameraFocus(controlsRef.current, focusCameraOnGPS(controlsRef.current, selectedFlight.latitude, selectedFlight.longitude, observerPosition.baro_altitude));
-        } else if (observerPosition) {
-          console.log("observerPosition", observerPosition);
-          animateCameraFocus(controlsRef.current, focusCameraOnGPS(controlsRef.current, observerPosition.latitude, observerPosition.longitude, observerPosition.baro_altitude));
-        } else {
-          console.log("default");
-          animateCameraFocus(controlsRef.current, new Vector3(0, 0, 0));
-        }
-      }, 500);
-      return () => clearTimeout(timer2);
-    }
-  }, [controlsRef, observerPosition, selectedFlight, mode]);
-  const cameraDistances = import_react17.useMemo(() => {
-    if (observerPosition && !selectedFlight) {
-      return { minDistance: 2, maxDistance: 30 };
-    }
-    if (observerPosition && selectedFlight) {
-      return { minDistance: kmToSceneUnits(1), maxDistance: 2 };
-    } else {
-      return { minDistance: 10, maxDistance: 30 };
-    }
-  }, [observerPosition, selectedFlight]);
-  return /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("div", {
+  }, [setControls, controlsRef, controlsRef.current]);
+  const cameraDistances = import_react16.useMemo(() => {
+    return { minDistance: kmToSceneUnits(1), maxDistance: 10 };
+  }, []);
+  return /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("div", {
     className: "h-full relative",
     children: [
-      /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(Canvas, {
+      /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(Canvas, {
         camera: { position: [0, 0, 10], fov: 50, rotation: [0, 0, 0], near: 0.01, far: 100 },
         onCreated: ({ gl }) => {
           gl.setAnimationLoop(null);
@@ -73970,43 +74558,33 @@ var MainScene = () => {
           animate();
         },
         children: [
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(GradientBackground, {
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(GradientBackground, {
             darknessMultiplier: darkness
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("ambientLight", {
-            intensity: 0.5
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("ambientLight", {
+            intensity: 1
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("pointLight", {
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("pointLight", {
             position: [10, 10, 10]
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(SpinningEarth, {
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(EarthMesh, {
             children: [
-              /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("mesh", {
-                children: [
-                  /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("sphereGeometry", {
-                    args: [5, 128, 128]
-                  }, undefined, false, undefined, this),
-                  /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("meshStandardMaterial", {
-                    color: "lightgrey"
-                  }, undefined, false, undefined, this)
-                ]
-              }, undefined, true, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(EarthGrid, {}, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(EarthCities, {}, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(ObserverMarker, {}, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(AirplaneMarker, {}, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(ConnectionLine, {}, undefined, false, undefined, this),
-              /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(AzimuthAngleOverlay, {}, undefined, false, undefined, this)
+              /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(EarthGrid, {}, undefined, false, undefined, this),
+              /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(EarthCities, {}, undefined, false, undefined, this),
+              /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(ObserverMarker, {}, undefined, false, undefined, this),
+              /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(AirplaneMarker, {}, undefined, false, undefined, this),
+              /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(ConnectionLine, {}, undefined, false, undefined, this),
+              /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(AzimuthAngleOverlay, {}, undefined, false, undefined, this)
             ]
           }, undefined, true, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(OrbitControls2, {
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(OrbitControls2, {
             ref: controlsRef,
             enableDamping: true,
-            dampingFactor: 0.01,
+            dampingFactor: 0.06,
             minDistance: cameraDistances.minDistance,
             maxDistance: cameraDistances.maxDistance
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(Stars, {
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(Stars, {
             radius: 100,
             depth: 50,
             count: 5000,
@@ -74017,16 +74595,16 @@ var MainScene = () => {
           }, undefined, false, undefined, this)
         ]
       }, undefined, true, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("div", {
+      /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("div", {
         className: "absolute bottom-4 right-4 flex items-center gap-2",
         children: [
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(HumidityVisibilityDisplay, {}, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(AngleDisplay, {}, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(ZoomControl, {
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(HumidityVisibilityDisplay, {}, undefined, false, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(AngleDisplay, {}, undefined, false, undefined, this),
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV(ZoomControl, {
             controlsRef,
             zoomStep: 5
           }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("div", {
+          /* @__PURE__ */ jsx_dev_runtime13.jsxDEV("div", {
             className: "bg-black/70 text-white p-2 rounded text-xs font-mono"
           }, undefined, false, undefined, this)
         ]
@@ -74036,18 +74614,2636 @@ var MainScene = () => {
 };
 
 // src/App.tsx
-var import_react19 = __toESM(require_react(), 1);
+var import_react17 = __toESM(require_react(), 1);
 
-// src/contexts/AircraftDataContext.tsx
-var import_react18 = __toESM(require_react(), 1);
-var jsx_dev_runtime15 = __toESM(require_jsx_dev_runtime(), 1);
-var TOKEN_EXPIRY_MINUTES = 30;
-var TOULOUSE_LATMIN = 42.8448;
-var TOULOUSE_LATMAX = 44.1972;
-var TOULOUSE_LONMIN = 0.6213;
-var TOULOUSE_LONMAX = 2.2152;
-var BOUNDING_BOX_HEIGHT = TOULOUSE_LATMAX - TOULOUSE_LATMIN;
-var BOUNDING_BOX_WIDTH = TOULOUSE_LONMAX - TOULOUSE_LONMIN;
+// node_modules/engine.io-parser/build/esm/commons.js
+var PACKET_TYPES = Object.create(null);
+PACKET_TYPES["open"] = "0";
+PACKET_TYPES["close"] = "1";
+PACKET_TYPES["ping"] = "2";
+PACKET_TYPES["pong"] = "3";
+PACKET_TYPES["message"] = "4";
+PACKET_TYPES["upgrade"] = "5";
+PACKET_TYPES["noop"] = "6";
+var PACKET_TYPES_REVERSE = Object.create(null);
+Object.keys(PACKET_TYPES).forEach((key) => {
+  PACKET_TYPES_REVERSE[PACKET_TYPES[key]] = key;
+});
+var ERROR_PACKET = { type: "error", data: "parser error" };
+
+// node_modules/engine.io-parser/build/esm/encodePacket.browser.js
+var withNativeBlob = typeof Blob === "function" || typeof Blob !== "undefined" && Object.prototype.toString.call(Blob) === "[object BlobConstructor]";
+var withNativeArrayBuffer = typeof ArrayBuffer === "function";
+var isView = (obj) => {
+  return typeof ArrayBuffer.isView === "function" ? ArrayBuffer.isView(obj) : obj && obj.buffer instanceof ArrayBuffer;
+};
+var encodePacket = ({ type, data }, supportsBinary, callback) => {
+  if (withNativeBlob && data instanceof Blob) {
+    if (supportsBinary) {
+      return callback(data);
+    } else {
+      return encodeBlobAsBase64(data, callback);
+    }
+  } else if (withNativeArrayBuffer && (data instanceof ArrayBuffer || isView(data))) {
+    if (supportsBinary) {
+      return callback(data);
+    } else {
+      return encodeBlobAsBase64(new Blob([data]), callback);
+    }
+  }
+  return callback(PACKET_TYPES[type] + (data || ""));
+};
+var encodeBlobAsBase64 = (data, callback) => {
+  const fileReader = new FileReader;
+  fileReader.onload = function() {
+    const content = fileReader.result.split(",")[1];
+    callback("b" + (content || ""));
+  };
+  return fileReader.readAsDataURL(data);
+};
+function toArray(data) {
+  if (data instanceof Uint8Array) {
+    return data;
+  } else if (data instanceof ArrayBuffer) {
+    return new Uint8Array(data);
+  } else {
+    return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  }
+}
+var TEXT_ENCODER;
+function encodePacketToBinary(packet, callback) {
+  if (withNativeBlob && packet.data instanceof Blob) {
+    return packet.data.arrayBuffer().then(toArray).then(callback);
+  } else if (withNativeArrayBuffer && (packet.data instanceof ArrayBuffer || isView(packet.data))) {
+    return callback(toArray(packet.data));
+  }
+  encodePacket(packet, false, (encoded) => {
+    if (!TEXT_ENCODER) {
+      TEXT_ENCODER = new TextEncoder;
+    }
+    callback(TEXT_ENCODER.encode(encoded));
+  });
+}
+
+// node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.js
+var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+var lookup = typeof Uint8Array === "undefined" ? [] : new Uint8Array(256);
+for (let i3 = 0;i3 < chars.length; i3++) {
+  lookup[chars.charCodeAt(i3)] = i3;
+}
+var decode = (base64) => {
+  let bufferLength = base64.length * 0.75, len = base64.length, i3, p3 = 0, encoded1, encoded2, encoded3, encoded4;
+  if (base64[base64.length - 1] === "=") {
+    bufferLength--;
+    if (base64[base64.length - 2] === "=") {
+      bufferLength--;
+    }
+  }
+  const arraybuffer = new ArrayBuffer(bufferLength), bytes = new Uint8Array(arraybuffer);
+  for (i3 = 0;i3 < len; i3 += 4) {
+    encoded1 = lookup[base64.charCodeAt(i3)];
+    encoded2 = lookup[base64.charCodeAt(i3 + 1)];
+    encoded3 = lookup[base64.charCodeAt(i3 + 2)];
+    encoded4 = lookup[base64.charCodeAt(i3 + 3)];
+    bytes[p3++] = encoded1 << 2 | encoded2 >> 4;
+    bytes[p3++] = (encoded2 & 15) << 4 | encoded3 >> 2;
+    bytes[p3++] = (encoded3 & 3) << 6 | encoded4 & 63;
+  }
+  return arraybuffer;
+};
+
+// node_modules/engine.io-parser/build/esm/decodePacket.browser.js
+var withNativeArrayBuffer2 = typeof ArrayBuffer === "function";
+var decodePacket = (encodedPacket, binaryType) => {
+  if (typeof encodedPacket !== "string") {
+    return {
+      type: "message",
+      data: mapBinary(encodedPacket, binaryType)
+    };
+  }
+  const type = encodedPacket.charAt(0);
+  if (type === "b") {
+    return {
+      type: "message",
+      data: decodeBase64Packet(encodedPacket.substring(1), binaryType)
+    };
+  }
+  const packetType = PACKET_TYPES_REVERSE[type];
+  if (!packetType) {
+    return ERROR_PACKET;
+  }
+  return encodedPacket.length > 1 ? {
+    type: PACKET_TYPES_REVERSE[type],
+    data: encodedPacket.substring(1)
+  } : {
+    type: PACKET_TYPES_REVERSE[type]
+  };
+};
+var decodeBase64Packet = (data, binaryType) => {
+  if (withNativeArrayBuffer2) {
+    const decoded = decode(data);
+    return mapBinary(decoded, binaryType);
+  } else {
+    return { base64: true, data };
+  }
+};
+var mapBinary = (data, binaryType) => {
+  switch (binaryType) {
+    case "blob":
+      if (data instanceof Blob) {
+        return data;
+      } else {
+        return new Blob([data]);
+      }
+    case "arraybuffer":
+    default:
+      if (data instanceof ArrayBuffer) {
+        return data;
+      } else {
+        return data.buffer;
+      }
+  }
+};
+
+// node_modules/engine.io-parser/build/esm/index.js
+var SEPARATOR = String.fromCharCode(30);
+var encodePayload = (packets, callback) => {
+  const length = packets.length;
+  const encodedPackets = new Array(length);
+  let count = 0;
+  packets.forEach((packet, i3) => {
+    encodePacket(packet, false, (encodedPacket) => {
+      encodedPackets[i3] = encodedPacket;
+      if (++count === length) {
+        callback(encodedPackets.join(SEPARATOR));
+      }
+    });
+  });
+};
+var decodePayload = (encodedPayload, binaryType) => {
+  const encodedPackets = encodedPayload.split(SEPARATOR);
+  const packets = [];
+  for (let i3 = 0;i3 < encodedPackets.length; i3++) {
+    const decodedPacket = decodePacket(encodedPackets[i3], binaryType);
+    packets.push(decodedPacket);
+    if (decodedPacket.type === "error") {
+      break;
+    }
+  }
+  return packets;
+};
+function createPacketEncoderStream() {
+  return new TransformStream({
+    transform(packet, controller) {
+      encodePacketToBinary(packet, (encodedPacket) => {
+        const payloadLength = encodedPacket.length;
+        let header;
+        if (payloadLength < 126) {
+          header = new Uint8Array(1);
+          new DataView(header.buffer).setUint8(0, payloadLength);
+        } else if (payloadLength < 65536) {
+          header = new Uint8Array(3);
+          const view = new DataView(header.buffer);
+          view.setUint8(0, 126);
+          view.setUint16(1, payloadLength);
+        } else {
+          header = new Uint8Array(9);
+          const view = new DataView(header.buffer);
+          view.setUint8(0, 127);
+          view.setBigUint64(1, BigInt(payloadLength));
+        }
+        if (packet.data && typeof packet.data !== "string") {
+          header[0] |= 128;
+        }
+        controller.enqueue(header);
+        controller.enqueue(encodedPacket);
+      });
+    }
+  });
+}
+var TEXT_DECODER;
+function totalLength(chunks) {
+  return chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+}
+function concatChunks(chunks, size) {
+  if (chunks[0].length === size) {
+    return chunks.shift();
+  }
+  const buffer = new Uint8Array(size);
+  let j2 = 0;
+  for (let i3 = 0;i3 < size; i3++) {
+    buffer[i3] = chunks[0][j2++];
+    if (j2 === chunks[0].length) {
+      chunks.shift();
+      j2 = 0;
+    }
+  }
+  if (chunks.length && j2 < chunks[0].length) {
+    chunks[0] = chunks[0].slice(j2);
+  }
+  return buffer;
+}
+function createPacketDecoderStream(maxPayload, binaryType) {
+  if (!TEXT_DECODER) {
+    TEXT_DECODER = new TextDecoder;
+  }
+  const chunks = [];
+  let state2 = 0;
+  let expectedLength = -1;
+  let isBinary = false;
+  return new TransformStream({
+    transform(chunk, controller) {
+      chunks.push(chunk);
+      while (true) {
+        if (state2 === 0) {
+          if (totalLength(chunks) < 1) {
+            break;
+          }
+          const header = concatChunks(chunks, 1);
+          isBinary = (header[0] & 128) === 128;
+          expectedLength = header[0] & 127;
+          if (expectedLength < 126) {
+            state2 = 3;
+          } else if (expectedLength === 126) {
+            state2 = 1;
+          } else {
+            state2 = 2;
+          }
+        } else if (state2 === 1) {
+          if (totalLength(chunks) < 2) {
+            break;
+          }
+          const headerArray = concatChunks(chunks, 2);
+          expectedLength = new DataView(headerArray.buffer, headerArray.byteOffset, headerArray.length).getUint16(0);
+          state2 = 3;
+        } else if (state2 === 2) {
+          if (totalLength(chunks) < 8) {
+            break;
+          }
+          const headerArray = concatChunks(chunks, 8);
+          const view = new DataView(headerArray.buffer, headerArray.byteOffset, headerArray.length);
+          const n = view.getUint32(0);
+          if (n > Math.pow(2, 53 - 32) - 1) {
+            controller.enqueue(ERROR_PACKET);
+            break;
+          }
+          expectedLength = n * Math.pow(2, 32) + view.getUint32(4);
+          state2 = 3;
+        } else {
+          if (totalLength(chunks) < expectedLength) {
+            break;
+          }
+          const data = concatChunks(chunks, expectedLength);
+          controller.enqueue(decodePacket(isBinary ? data : TEXT_DECODER.decode(data), binaryType));
+          state2 = 0;
+        }
+        if (expectedLength === 0 || expectedLength > maxPayload) {
+          controller.enqueue(ERROR_PACKET);
+          break;
+        }
+      }
+    }
+  });
+}
+var protocol = 4;
+
+// node_modules/@socket.io/component-emitter/lib/esm/index.js
+function Emitter(obj) {
+  if (obj)
+    return mixin(obj);
+}
+function mixin(obj) {
+  for (var key in Emitter.prototype) {
+    obj[key] = Emitter.prototype[key];
+  }
+  return obj;
+}
+Emitter.prototype.on = Emitter.prototype.addEventListener = function(event, fn) {
+  this._callbacks = this._callbacks || {};
+  (this._callbacks["$" + event] = this._callbacks["$" + event] || []).push(fn);
+  return this;
+};
+Emitter.prototype.once = function(event, fn) {
+  function on() {
+    this.off(event, on);
+    fn.apply(this, arguments);
+  }
+  on.fn = fn;
+  this.on(event, on);
+  return this;
+};
+Emitter.prototype.off = Emitter.prototype.removeListener = Emitter.prototype.removeAllListeners = Emitter.prototype.removeEventListener = function(event, fn) {
+  this._callbacks = this._callbacks || {};
+  if (arguments.length == 0) {
+    this._callbacks = {};
+    return this;
+  }
+  var callbacks = this._callbacks["$" + event];
+  if (!callbacks)
+    return this;
+  if (arguments.length == 1) {
+    delete this._callbacks["$" + event];
+    return this;
+  }
+  var cb;
+  for (var i3 = 0;i3 < callbacks.length; i3++) {
+    cb = callbacks[i3];
+    if (cb === fn || cb.fn === fn) {
+      callbacks.splice(i3, 1);
+      break;
+    }
+  }
+  if (callbacks.length === 0) {
+    delete this._callbacks["$" + event];
+  }
+  return this;
+};
+Emitter.prototype.emit = function(event) {
+  this._callbacks = this._callbacks || {};
+  var args = new Array(arguments.length - 1), callbacks = this._callbacks["$" + event];
+  for (var i3 = 1;i3 < arguments.length; i3++) {
+    args[i3 - 1] = arguments[i3];
+  }
+  if (callbacks) {
+    callbacks = callbacks.slice(0);
+    for (var i3 = 0, len = callbacks.length;i3 < len; ++i3) {
+      callbacks[i3].apply(this, args);
+    }
+  }
+  return this;
+};
+Emitter.prototype.emitReserved = Emitter.prototype.emit;
+Emitter.prototype.listeners = function(event) {
+  this._callbacks = this._callbacks || {};
+  return this._callbacks["$" + event] || [];
+};
+Emitter.prototype.hasListeners = function(event) {
+  return !!this.listeners(event).length;
+};
+
+// node_modules/engine.io-client/build/esm/globals.js
+var nextTick = (() => {
+  const isPromiseAvailable = typeof Promise === "function" && typeof Promise.resolve === "function";
+  if (isPromiseAvailable) {
+    return (cb) => Promise.resolve().then(cb);
+  } else {
+    return (cb, setTimeoutFn) => setTimeoutFn(cb, 0);
+  }
+})();
+var globalThisShim = (() => {
+  if (typeof self !== "undefined") {
+    return self;
+  } else if (typeof window !== "undefined") {
+    return window;
+  } else {
+    return Function("return this")();
+  }
+})();
+var defaultBinaryType = "arraybuffer";
+function createCookieJar() {}
+
+// node_modules/engine.io-client/build/esm/util.js
+function pick(obj, ...attr) {
+  return attr.reduce((acc, k2) => {
+    if (obj.hasOwnProperty(k2)) {
+      acc[k2] = obj[k2];
+    }
+    return acc;
+  }, {});
+}
+var NATIVE_SET_TIMEOUT = globalThisShim.setTimeout;
+var NATIVE_CLEAR_TIMEOUT = globalThisShim.clearTimeout;
+function installTimerFunctions(obj, opts) {
+  if (opts.useNativeTimers) {
+    obj.setTimeoutFn = NATIVE_SET_TIMEOUT.bind(globalThisShim);
+    obj.clearTimeoutFn = NATIVE_CLEAR_TIMEOUT.bind(globalThisShim);
+  } else {
+    obj.setTimeoutFn = globalThisShim.setTimeout.bind(globalThisShim);
+    obj.clearTimeoutFn = globalThisShim.clearTimeout.bind(globalThisShim);
+  }
+}
+var BASE64_OVERHEAD = 1.33;
+function byteLength(obj) {
+  if (typeof obj === "string") {
+    return utf8Length(obj);
+  }
+  return Math.ceil((obj.byteLength || obj.size) * BASE64_OVERHEAD);
+}
+function utf8Length(str) {
+  let c2 = 0, length = 0;
+  for (let i3 = 0, l2 = str.length;i3 < l2; i3++) {
+    c2 = str.charCodeAt(i3);
+    if (c2 < 128) {
+      length += 1;
+    } else if (c2 < 2048) {
+      length += 2;
+    } else if (c2 < 55296 || c2 >= 57344) {
+      length += 3;
+    } else {
+      i3++;
+      length += 4;
+    }
+  }
+  return length;
+}
+function randomString() {
+  return Date.now().toString(36).substring(3) + Math.random().toString(36).substring(2, 5);
+}
+
+// node_modules/engine.io-client/build/esm/contrib/parseqs.js
+function encode(obj) {
+  let str = "";
+  for (let i3 in obj) {
+    if (obj.hasOwnProperty(i3)) {
+      if (str.length)
+        str += "&";
+      str += encodeURIComponent(i3) + "=" + encodeURIComponent(obj[i3]);
+    }
+  }
+  return str;
+}
+function decode2(qs) {
+  let qry = {};
+  let pairs = qs.split("&");
+  for (let i3 = 0, l2 = pairs.length;i3 < l2; i3++) {
+    let pair = pairs[i3].split("=");
+    qry[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+  }
+  return qry;
+}
+
+// node_modules/engine.io-client/build/esm/transport.js
+class TransportError extends Error {
+  constructor(reason, description, context2) {
+    super(reason);
+    this.description = description;
+    this.context = context2;
+    this.type = "TransportError";
+  }
+}
+
+class Transport extends Emitter {
+  constructor(opts) {
+    super();
+    this.writable = false;
+    installTimerFunctions(this, opts);
+    this.opts = opts;
+    this.query = opts.query;
+    this.socket = opts.socket;
+    this.supportsBinary = !opts.forceBase64;
+  }
+  onError(reason, description, context2) {
+    super.emitReserved("error", new TransportError(reason, description, context2));
+    return this;
+  }
+  open() {
+    this.readyState = "opening";
+    this.doOpen();
+    return this;
+  }
+  close() {
+    if (this.readyState === "opening" || this.readyState === "open") {
+      this.doClose();
+      this.onClose();
+    }
+    return this;
+  }
+  send(packets) {
+    if (this.readyState === "open") {
+      this.write(packets);
+    } else {}
+  }
+  onOpen() {
+    this.readyState = "open";
+    this.writable = true;
+    super.emitReserved("open");
+  }
+  onData(data) {
+    const packet = decodePacket(data, this.socket.binaryType);
+    this.onPacket(packet);
+  }
+  onPacket(packet) {
+    super.emitReserved("packet", packet);
+  }
+  onClose(details) {
+    this.readyState = "closed";
+    super.emitReserved("close", details);
+  }
+  pause(onPause) {}
+  createUri(schema, query2 = {}) {
+    return schema + "://" + this._hostname() + this._port() + this.opts.path + this._query(query2);
+  }
+  _hostname() {
+    const hostname = this.opts.hostname;
+    return hostname.indexOf(":") === -1 ? hostname : "[" + hostname + "]";
+  }
+  _port() {
+    if (this.opts.port && (this.opts.secure && Number(this.opts.port) !== 443 || !this.opts.secure && Number(this.opts.port) !== 80)) {
+      return ":" + this.opts.port;
+    } else {
+      return "";
+    }
+  }
+  _query(query2) {
+    const encodedQuery = encode(query2);
+    return encodedQuery.length ? "?" + encodedQuery : "";
+  }
+}
+
+// node_modules/engine.io-client/build/esm/transports/polling.js
+class Polling extends Transport {
+  constructor() {
+    super(...arguments);
+    this._polling = false;
+  }
+  get name() {
+    return "polling";
+  }
+  doOpen() {
+    this._poll();
+  }
+  pause(onPause) {
+    this.readyState = "pausing";
+    const pause = () => {
+      this.readyState = "paused";
+      onPause();
+    };
+    if (this._polling || !this.writable) {
+      let total = 0;
+      if (this._polling) {
+        total++;
+        this.once("pollComplete", function() {
+          --total || pause();
+        });
+      }
+      if (!this.writable) {
+        total++;
+        this.once("drain", function() {
+          --total || pause();
+        });
+      }
+    } else {
+      pause();
+    }
+  }
+  _poll() {
+    this._polling = true;
+    this.doPoll();
+    this.emitReserved("poll");
+  }
+  onData(data) {
+    const callback = (packet) => {
+      if (this.readyState === "opening" && packet.type === "open") {
+        this.onOpen();
+      }
+      if (packet.type === "close") {
+        this.onClose({ description: "transport closed by the server" });
+        return false;
+      }
+      this.onPacket(packet);
+    };
+    decodePayload(data, this.socket.binaryType).forEach(callback);
+    if (this.readyState !== "closed") {
+      this._polling = false;
+      this.emitReserved("pollComplete");
+      if (this.readyState === "open") {
+        this._poll();
+      } else {}
+    }
+  }
+  doClose() {
+    const close = () => {
+      this.write([{ type: "close" }]);
+    };
+    if (this.readyState === "open") {
+      close();
+    } else {
+      this.once("open", close);
+    }
+  }
+  write(packets) {
+    this.writable = false;
+    encodePayload(packets, (data) => {
+      this.doWrite(data, () => {
+        this.writable = true;
+        this.emitReserved("drain");
+      });
+    });
+  }
+  uri() {
+    const schema = this.opts.secure ? "https" : "http";
+    const query2 = this.query || {};
+    if (this.opts.timestampRequests !== false) {
+      query2[this.opts.timestampParam] = randomString();
+    }
+    if (!this.supportsBinary && !query2.sid) {
+      query2.b64 = 1;
+    }
+    return this.createUri(schema, query2);
+  }
+}
+
+// node_modules/engine.io-client/build/esm/contrib/has-cors.js
+var value = false;
+try {
+  value = typeof XMLHttpRequest !== "undefined" && "withCredentials" in new XMLHttpRequest;
+} catch (err) {}
+var hasCORS = value;
+
+// node_modules/engine.io-client/build/esm/transports/polling-xhr.js
+function empty() {}
+
+class BaseXHR extends Polling {
+  constructor(opts) {
+    super(opts);
+    if (typeof location !== "undefined") {
+      const isSSL = location.protocol === "https:";
+      let port = location.port;
+      if (!port) {
+        port = isSSL ? "443" : "80";
+      }
+      this.xd = typeof location !== "undefined" && opts.hostname !== location.hostname || port !== opts.port;
+    }
+  }
+  doWrite(data, fn) {
+    const req = this.request({
+      method: "POST",
+      data
+    });
+    req.on("success", fn);
+    req.on("error", (xhrStatus, context2) => {
+      this.onError("xhr post error", xhrStatus, context2);
+    });
+  }
+  doPoll() {
+    const req = this.request();
+    req.on("data", this.onData.bind(this));
+    req.on("error", (xhrStatus, context2) => {
+      this.onError("xhr poll error", xhrStatus, context2);
+    });
+    this.pollXhr = req;
+  }
+}
+
+class Request2 extends Emitter {
+  constructor(createRequest, uri, opts) {
+    super();
+    this.createRequest = createRequest;
+    installTimerFunctions(this, opts);
+    this._opts = opts;
+    this._method = opts.method || "GET";
+    this._uri = uri;
+    this._data = opts.data !== undefined ? opts.data : null;
+    this._create();
+  }
+  _create() {
+    var _a;
+    const opts = pick(this._opts, "agent", "pfx", "key", "passphrase", "cert", "ca", "ciphers", "rejectUnauthorized", "autoUnref");
+    opts.xdomain = !!this._opts.xd;
+    const xhr = this._xhr = this.createRequest(opts);
+    try {
+      xhr.open(this._method, this._uri, true);
+      try {
+        if (this._opts.extraHeaders) {
+          xhr.setDisableHeaderCheck && xhr.setDisableHeaderCheck(true);
+          for (let i3 in this._opts.extraHeaders) {
+            if (this._opts.extraHeaders.hasOwnProperty(i3)) {
+              xhr.setRequestHeader(i3, this._opts.extraHeaders[i3]);
+            }
+          }
+        }
+      } catch (e2) {}
+      if (this._method === "POST") {
+        try {
+          xhr.setRequestHeader("Content-type", "text/plain;charset=UTF-8");
+        } catch (e2) {}
+      }
+      try {
+        xhr.setRequestHeader("Accept", "*/*");
+      } catch (e2) {}
+      (_a = this._opts.cookieJar) === null || _a === undefined || _a.addCookies(xhr);
+      if ("withCredentials" in xhr) {
+        xhr.withCredentials = this._opts.withCredentials;
+      }
+      if (this._opts.requestTimeout) {
+        xhr.timeout = this._opts.requestTimeout;
+      }
+      xhr.onreadystatechange = () => {
+        var _a2;
+        if (xhr.readyState === 3) {
+          (_a2 = this._opts.cookieJar) === null || _a2 === undefined || _a2.parseCookies(xhr.getResponseHeader("set-cookie"));
+        }
+        if (xhr.readyState !== 4)
+          return;
+        if (xhr.status === 200 || xhr.status === 1223) {
+          this._onLoad();
+        } else {
+          this.setTimeoutFn(() => {
+            this._onError(typeof xhr.status === "number" ? xhr.status : 0);
+          }, 0);
+        }
+      };
+      xhr.send(this._data);
+    } catch (e2) {
+      this.setTimeoutFn(() => {
+        this._onError(e2);
+      }, 0);
+      return;
+    }
+    if (typeof document !== "undefined") {
+      this._index = Request2.requestsCount++;
+      Request2.requests[this._index] = this;
+    }
+  }
+  _onError(err) {
+    this.emitReserved("error", err, this._xhr);
+    this._cleanup(true);
+  }
+  _cleanup(fromError) {
+    if (typeof this._xhr === "undefined" || this._xhr === null) {
+      return;
+    }
+    this._xhr.onreadystatechange = empty;
+    if (fromError) {
+      try {
+        this._xhr.abort();
+      } catch (e2) {}
+    }
+    if (typeof document !== "undefined") {
+      delete Request2.requests[this._index];
+    }
+    this._xhr = null;
+  }
+  _onLoad() {
+    const data = this._xhr.responseText;
+    if (data !== null) {
+      this.emitReserved("data", data);
+      this.emitReserved("success");
+      this._cleanup();
+    }
+  }
+  abort() {
+    this._cleanup();
+  }
+}
+Request2.requestsCount = 0;
+Request2.requests = {};
+if (typeof document !== "undefined") {
+  if (typeof attachEvent === "function") {
+    attachEvent("onunload", unloadHandler);
+  } else if (typeof addEventListener === "function") {
+    const terminationEvent = "onpagehide" in globalThisShim ? "pagehide" : "unload";
+    addEventListener(terminationEvent, unloadHandler, false);
+  }
+}
+function unloadHandler() {
+  for (let i3 in Request2.requests) {
+    if (Request2.requests.hasOwnProperty(i3)) {
+      Request2.requests[i3].abort();
+    }
+  }
+}
+var hasXHR2 = function() {
+  const xhr = newRequest({
+    xdomain: false
+  });
+  return xhr && xhr.responseType !== null;
+}();
+
+class XHR extends BaseXHR {
+  constructor(opts) {
+    super(opts);
+    const forceBase64 = opts && opts.forceBase64;
+    this.supportsBinary = hasXHR2 && !forceBase64;
+  }
+  request(opts = {}) {
+    Object.assign(opts, { xd: this.xd }, this.opts);
+    return new Request2(newRequest, this.uri(), opts);
+  }
+}
+function newRequest(opts) {
+  const xdomain = opts.xdomain;
+  try {
+    if (typeof XMLHttpRequest !== "undefined" && (!xdomain || hasCORS)) {
+      return new XMLHttpRequest;
+    }
+  } catch (e2) {}
+  if (!xdomain) {
+    try {
+      return new globalThisShim[["Active"].concat("Object").join("X")]("Microsoft.XMLHTTP");
+    } catch (e2) {}
+  }
+}
+
+// node_modules/engine.io-client/build/esm/transports/websocket.js
+var isReactNative = typeof navigator !== "undefined" && typeof navigator.product === "string" && navigator.product.toLowerCase() === "reactnative";
+
+class BaseWS extends Transport {
+  get name() {
+    return "websocket";
+  }
+  doOpen() {
+    const uri = this.uri();
+    const protocols = this.opts.protocols;
+    const opts = isReactNative ? {} : pick(this.opts, "agent", "perMessageDeflate", "pfx", "key", "passphrase", "cert", "ca", "ciphers", "rejectUnauthorized", "localAddress", "protocolVersion", "origin", "maxPayload", "family", "checkServerIdentity");
+    if (this.opts.extraHeaders) {
+      opts.headers = this.opts.extraHeaders;
+    }
+    try {
+      this.ws = this.createSocket(uri, protocols, opts);
+    } catch (err) {
+      return this.emitReserved("error", err);
+    }
+    this.ws.binaryType = this.socket.binaryType;
+    this.addEventListeners();
+  }
+  addEventListeners() {
+    this.ws.onopen = () => {
+      if (this.opts.autoUnref) {
+        this.ws._socket.unref();
+      }
+      this.onOpen();
+    };
+    this.ws.onclose = (closeEvent) => this.onClose({
+      description: "websocket connection closed",
+      context: closeEvent
+    });
+    this.ws.onmessage = (ev) => this.onData(ev.data);
+    this.ws.onerror = (e2) => this.onError("websocket error", e2);
+  }
+  write(packets) {
+    this.writable = false;
+    for (let i3 = 0;i3 < packets.length; i3++) {
+      const packet = packets[i3];
+      const lastPacket = i3 === packets.length - 1;
+      encodePacket(packet, this.supportsBinary, (data) => {
+        try {
+          this.doWrite(packet, data);
+        } catch (e2) {}
+        if (lastPacket) {
+          nextTick(() => {
+            this.writable = true;
+            this.emitReserved("drain");
+          }, this.setTimeoutFn);
+        }
+      });
+    }
+  }
+  doClose() {
+    if (typeof this.ws !== "undefined") {
+      this.ws.onerror = () => {};
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+  uri() {
+    const schema = this.opts.secure ? "wss" : "ws";
+    const query2 = this.query || {};
+    if (this.opts.timestampRequests) {
+      query2[this.opts.timestampParam] = randomString();
+    }
+    if (!this.supportsBinary) {
+      query2.b64 = 1;
+    }
+    return this.createUri(schema, query2);
+  }
+}
+var WebSocketCtor = globalThisShim.WebSocket || globalThisShim.MozWebSocket;
+
+class WS extends BaseWS {
+  createSocket(uri, protocols, opts) {
+    return !isReactNative ? protocols ? new WebSocketCtor(uri, protocols) : new WebSocketCtor(uri) : new WebSocketCtor(uri, protocols, opts);
+  }
+  doWrite(_packet, data) {
+    this.ws.send(data);
+  }
+}
+
+// node_modules/engine.io-client/build/esm/transports/webtransport.js
+class WT extends Transport {
+  get name() {
+    return "webtransport";
+  }
+  doOpen() {
+    try {
+      this._transport = new WebTransport(this.createUri("https"), this.opts.transportOptions[this.name]);
+    } catch (err) {
+      return this.emitReserved("error", err);
+    }
+    this._transport.closed.then(() => {
+      this.onClose();
+    }).catch((err) => {
+      this.onError("webtransport error", err);
+    });
+    this._transport.ready.then(() => {
+      this._transport.createBidirectionalStream().then((stream) => {
+        const decoderStream = createPacketDecoderStream(Number.MAX_SAFE_INTEGER, this.socket.binaryType);
+        const reader = stream.readable.pipeThrough(decoderStream).getReader();
+        const encoderStream = createPacketEncoderStream();
+        encoderStream.readable.pipeTo(stream.writable);
+        this._writer = encoderStream.writable.getWriter();
+        const read = () => {
+          reader.read().then(({ done, value: value2 }) => {
+            if (done) {
+              return;
+            }
+            this.onPacket(value2);
+            read();
+          }).catch((err) => {});
+        };
+        read();
+        const packet = { type: "open" };
+        if (this.query.sid) {
+          packet.data = `{"sid":"${this.query.sid}"}`;
+        }
+        this._writer.write(packet).then(() => this.onOpen());
+      });
+    });
+  }
+  write(packets) {
+    this.writable = false;
+    for (let i3 = 0;i3 < packets.length; i3++) {
+      const packet = packets[i3];
+      const lastPacket = i3 === packets.length - 1;
+      this._writer.write(packet).then(() => {
+        if (lastPacket) {
+          nextTick(() => {
+            this.writable = true;
+            this.emitReserved("drain");
+          }, this.setTimeoutFn);
+        }
+      });
+    }
+  }
+  doClose() {
+    var _a;
+    (_a = this._transport) === null || _a === undefined || _a.close();
+  }
+}
+
+// node_modules/engine.io-client/build/esm/transports/index.js
+var transports = {
+  websocket: WS,
+  webtransport: WT,
+  polling: XHR
+};
+
+// node_modules/engine.io-client/build/esm/contrib/parseuri.js
+var re = /^(?:(?![^:@\/?#]+:[^:@\/]*@)(http|https|ws|wss):\/\/)?((?:(([^:@\/?#]*)(?::([^:@\/?#]*))?)?@)?((?:[a-f0-9]{0,4}:){2,7}[a-f0-9]{0,4}|[^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/;
+var parts = [
+  "source",
+  "protocol",
+  "authority",
+  "userInfo",
+  "user",
+  "password",
+  "host",
+  "port",
+  "relative",
+  "path",
+  "directory",
+  "file",
+  "query",
+  "anchor"
+];
+function parse(str) {
+  if (str.length > 8000) {
+    throw "URI too long";
+  }
+  const src = str, b2 = str.indexOf("["), e2 = str.indexOf("]");
+  if (b2 != -1 && e2 != -1) {
+    str = str.substring(0, b2) + str.substring(b2, e2).replace(/:/g, ";") + str.substring(e2, str.length);
+  }
+  let m2 = re.exec(str || ""), uri = {}, i3 = 14;
+  while (i3--) {
+    uri[parts[i3]] = m2[i3] || "";
+  }
+  if (b2 != -1 && e2 != -1) {
+    uri.source = src;
+    uri.host = uri.host.substring(1, uri.host.length - 1).replace(/;/g, ":");
+    uri.authority = uri.authority.replace("[", "").replace("]", "").replace(/;/g, ":");
+    uri.ipv6uri = true;
+  }
+  uri.pathNames = pathNames(uri, uri["path"]);
+  uri.queryKey = queryKey(uri, uri["query"]);
+  return uri;
+}
+function pathNames(obj, path) {
+  const regx = /\/{2,9}/g, names = path.replace(regx, "/").split("/");
+  if (path.slice(0, 1) == "/" || path.length === 0) {
+    names.splice(0, 1);
+  }
+  if (path.slice(-1) == "/") {
+    names.splice(names.length - 1, 1);
+  }
+  return names;
+}
+function queryKey(uri, query2) {
+  const data = {};
+  query2.replace(/(?:^|&)([^&=]*)=?([^&]*)/g, function($0, $1, $2) {
+    if ($1) {
+      data[$1] = $2;
+    }
+  });
+  return data;
+}
+
+// node_modules/engine.io-client/build/esm/socket.js
+var withEventListeners = typeof addEventListener === "function" && typeof removeEventListener === "function";
+var OFFLINE_EVENT_LISTENERS = [];
+if (withEventListeners) {
+  addEventListener("offline", () => {
+    OFFLINE_EVENT_LISTENERS.forEach((listener) => listener());
+  }, false);
+}
+
+class SocketWithoutUpgrade extends Emitter {
+  constructor(uri, opts) {
+    super();
+    this.binaryType = defaultBinaryType;
+    this.writeBuffer = [];
+    this._prevBufferLen = 0;
+    this._pingInterval = -1;
+    this._pingTimeout = -1;
+    this._maxPayload = -1;
+    this._pingTimeoutTime = Infinity;
+    if (uri && typeof uri === "object") {
+      opts = uri;
+      uri = null;
+    }
+    if (uri) {
+      const parsedUri = parse(uri);
+      opts.hostname = parsedUri.host;
+      opts.secure = parsedUri.protocol === "https" || parsedUri.protocol === "wss";
+      opts.port = parsedUri.port;
+      if (parsedUri.query)
+        opts.query = parsedUri.query;
+    } else if (opts.host) {
+      opts.hostname = parse(opts.host).host;
+    }
+    installTimerFunctions(this, opts);
+    this.secure = opts.secure != null ? opts.secure : typeof location !== "undefined" && location.protocol === "https:";
+    if (opts.hostname && !opts.port) {
+      opts.port = this.secure ? "443" : "80";
+    }
+    this.hostname = opts.hostname || (typeof location !== "undefined" ? location.hostname : "localhost");
+    this.port = opts.port || (typeof location !== "undefined" && location.port ? location.port : this.secure ? "443" : "80");
+    this.transports = [];
+    this._transportsByName = {};
+    opts.transports.forEach((t2) => {
+      const transportName = t2.prototype.name;
+      this.transports.push(transportName);
+      this._transportsByName[transportName] = t2;
+    });
+    this.opts = Object.assign({
+      path: "/engine.io",
+      agent: false,
+      withCredentials: false,
+      upgrade: true,
+      timestampParam: "t",
+      rememberUpgrade: false,
+      addTrailingSlash: true,
+      rejectUnauthorized: true,
+      perMessageDeflate: {
+        threshold: 1024
+      },
+      transportOptions: {},
+      closeOnBeforeunload: false
+    }, opts);
+    this.opts.path = this.opts.path.replace(/\/$/, "") + (this.opts.addTrailingSlash ? "/" : "");
+    if (typeof this.opts.query === "string") {
+      this.opts.query = decode2(this.opts.query);
+    }
+    if (withEventListeners) {
+      if (this.opts.closeOnBeforeunload) {
+        this._beforeunloadEventListener = () => {
+          if (this.transport) {
+            this.transport.removeAllListeners();
+            this.transport.close();
+          }
+        };
+        addEventListener("beforeunload", this._beforeunloadEventListener, false);
+      }
+      if (this.hostname !== "localhost") {
+        this._offlineEventListener = () => {
+          this._onClose("transport close", {
+            description: "network connection lost"
+          });
+        };
+        OFFLINE_EVENT_LISTENERS.push(this._offlineEventListener);
+      }
+    }
+    if (this.opts.withCredentials) {
+      this._cookieJar = createCookieJar();
+    }
+    this._open();
+  }
+  createTransport(name) {
+    const query2 = Object.assign({}, this.opts.query);
+    query2.EIO = protocol;
+    query2.transport = name;
+    if (this.id)
+      query2.sid = this.id;
+    const opts = Object.assign({}, this.opts, {
+      query: query2,
+      socket: this,
+      hostname: this.hostname,
+      secure: this.secure,
+      port: this.port
+    }, this.opts.transportOptions[name]);
+    return new this._transportsByName[name](opts);
+  }
+  _open() {
+    if (this.transports.length === 0) {
+      this.setTimeoutFn(() => {
+        this.emitReserved("error", "No transports available");
+      }, 0);
+      return;
+    }
+    const transportName = this.opts.rememberUpgrade && SocketWithoutUpgrade.priorWebsocketSuccess && this.transports.indexOf("websocket") !== -1 ? "websocket" : this.transports[0];
+    this.readyState = "opening";
+    const transport = this.createTransport(transportName);
+    transport.open();
+    this.setTransport(transport);
+  }
+  setTransport(transport) {
+    if (this.transport) {
+      this.transport.removeAllListeners();
+    }
+    this.transport = transport;
+    transport.on("drain", this._onDrain.bind(this)).on("packet", this._onPacket.bind(this)).on("error", this._onError.bind(this)).on("close", (reason) => this._onClose("transport close", reason));
+  }
+  onOpen() {
+    this.readyState = "open";
+    SocketWithoutUpgrade.priorWebsocketSuccess = this.transport.name === "websocket";
+    this.emitReserved("open");
+    this.flush();
+  }
+  _onPacket(packet) {
+    if (this.readyState === "opening" || this.readyState === "open" || this.readyState === "closing") {
+      this.emitReserved("packet", packet);
+      this.emitReserved("heartbeat");
+      switch (packet.type) {
+        case "open":
+          this.onHandshake(JSON.parse(packet.data));
+          break;
+        case "ping":
+          this._sendPacket("pong");
+          this.emitReserved("ping");
+          this.emitReserved("pong");
+          this._resetPingTimeout();
+          break;
+        case "error":
+          const err = new Error("server error");
+          err.code = packet.data;
+          this._onError(err);
+          break;
+        case "message":
+          this.emitReserved("data", packet.data);
+          this.emitReserved("message", packet.data);
+          break;
+      }
+    } else {}
+  }
+  onHandshake(data) {
+    this.emitReserved("handshake", data);
+    this.id = data.sid;
+    this.transport.query.sid = data.sid;
+    this._pingInterval = data.pingInterval;
+    this._pingTimeout = data.pingTimeout;
+    this._maxPayload = data.maxPayload;
+    this.onOpen();
+    if (this.readyState === "closed")
+      return;
+    this._resetPingTimeout();
+  }
+  _resetPingTimeout() {
+    this.clearTimeoutFn(this._pingTimeoutTimer);
+    const delay = this._pingInterval + this._pingTimeout;
+    this._pingTimeoutTime = Date.now() + delay;
+    this._pingTimeoutTimer = this.setTimeoutFn(() => {
+      this._onClose("ping timeout");
+    }, delay);
+    if (this.opts.autoUnref) {
+      this._pingTimeoutTimer.unref();
+    }
+  }
+  _onDrain() {
+    this.writeBuffer.splice(0, this._prevBufferLen);
+    this._prevBufferLen = 0;
+    if (this.writeBuffer.length === 0) {
+      this.emitReserved("drain");
+    } else {
+      this.flush();
+    }
+  }
+  flush() {
+    if (this.readyState !== "closed" && this.transport.writable && !this.upgrading && this.writeBuffer.length) {
+      const packets = this._getWritablePackets();
+      this.transport.send(packets);
+      this._prevBufferLen = packets.length;
+      this.emitReserved("flush");
+    }
+  }
+  _getWritablePackets() {
+    const shouldCheckPayloadSize = this._maxPayload && this.transport.name === "polling" && this.writeBuffer.length > 1;
+    if (!shouldCheckPayloadSize) {
+      return this.writeBuffer;
+    }
+    let payloadSize = 1;
+    for (let i3 = 0;i3 < this.writeBuffer.length; i3++) {
+      const data = this.writeBuffer[i3].data;
+      if (data) {
+        payloadSize += byteLength(data);
+      }
+      if (i3 > 0 && payloadSize > this._maxPayload) {
+        return this.writeBuffer.slice(0, i3);
+      }
+      payloadSize += 2;
+    }
+    return this.writeBuffer;
+  }
+  _hasPingExpired() {
+    if (!this._pingTimeoutTime)
+      return true;
+    const hasExpired = Date.now() > this._pingTimeoutTime;
+    if (hasExpired) {
+      this._pingTimeoutTime = 0;
+      nextTick(() => {
+        this._onClose("ping timeout");
+      }, this.setTimeoutFn);
+    }
+    return hasExpired;
+  }
+  write(msg, options, fn) {
+    this._sendPacket("message", msg, options, fn);
+    return this;
+  }
+  send(msg, options, fn) {
+    this._sendPacket("message", msg, options, fn);
+    return this;
+  }
+  _sendPacket(type, data, options, fn) {
+    if (typeof data === "function") {
+      fn = data;
+      data = undefined;
+    }
+    if (typeof options === "function") {
+      fn = options;
+      options = null;
+    }
+    if (this.readyState === "closing" || this.readyState === "closed") {
+      return;
+    }
+    options = options || {};
+    options.compress = options.compress !== false;
+    const packet = {
+      type,
+      data,
+      options
+    };
+    this.emitReserved("packetCreate", packet);
+    this.writeBuffer.push(packet);
+    if (fn)
+      this.once("flush", fn);
+    this.flush();
+  }
+  close() {
+    const close = () => {
+      this._onClose("forced close");
+      this.transport.close();
+    };
+    const cleanupAndClose = () => {
+      this.off("upgrade", cleanupAndClose);
+      this.off("upgradeError", cleanupAndClose);
+      close();
+    };
+    const waitForUpgrade = () => {
+      this.once("upgrade", cleanupAndClose);
+      this.once("upgradeError", cleanupAndClose);
+    };
+    if (this.readyState === "opening" || this.readyState === "open") {
+      this.readyState = "closing";
+      if (this.writeBuffer.length) {
+        this.once("drain", () => {
+          if (this.upgrading) {
+            waitForUpgrade();
+          } else {
+            close();
+          }
+        });
+      } else if (this.upgrading) {
+        waitForUpgrade();
+      } else {
+        close();
+      }
+    }
+    return this;
+  }
+  _onError(err) {
+    SocketWithoutUpgrade.priorWebsocketSuccess = false;
+    if (this.opts.tryAllTransports && this.transports.length > 1 && this.readyState === "opening") {
+      this.transports.shift();
+      return this._open();
+    }
+    this.emitReserved("error", err);
+    this._onClose("transport error", err);
+  }
+  _onClose(reason, description) {
+    if (this.readyState === "opening" || this.readyState === "open" || this.readyState === "closing") {
+      this.clearTimeoutFn(this._pingTimeoutTimer);
+      this.transport.removeAllListeners("close");
+      this.transport.close();
+      this.transport.removeAllListeners();
+      if (withEventListeners) {
+        if (this._beforeunloadEventListener) {
+          removeEventListener("beforeunload", this._beforeunloadEventListener, false);
+        }
+        if (this._offlineEventListener) {
+          const i3 = OFFLINE_EVENT_LISTENERS.indexOf(this._offlineEventListener);
+          if (i3 !== -1) {
+            OFFLINE_EVENT_LISTENERS.splice(i3, 1);
+          }
+        }
+      }
+      this.readyState = "closed";
+      this.id = null;
+      this.emitReserved("close", reason, description);
+      this.writeBuffer = [];
+      this._prevBufferLen = 0;
+    }
+  }
+}
+SocketWithoutUpgrade.protocol = protocol;
+
+class SocketWithUpgrade extends SocketWithoutUpgrade {
+  constructor() {
+    super(...arguments);
+    this._upgrades = [];
+  }
+  onOpen() {
+    super.onOpen();
+    if (this.readyState === "open" && this.opts.upgrade) {
+      for (let i3 = 0;i3 < this._upgrades.length; i3++) {
+        this._probe(this._upgrades[i3]);
+      }
+    }
+  }
+  _probe(name) {
+    let transport = this.createTransport(name);
+    let failed = false;
+    SocketWithoutUpgrade.priorWebsocketSuccess = false;
+    const onTransportOpen = () => {
+      if (failed)
+        return;
+      transport.send([{ type: "ping", data: "probe" }]);
+      transport.once("packet", (msg) => {
+        if (failed)
+          return;
+        if (msg.type === "pong" && msg.data === "probe") {
+          this.upgrading = true;
+          this.emitReserved("upgrading", transport);
+          if (!transport)
+            return;
+          SocketWithoutUpgrade.priorWebsocketSuccess = transport.name === "websocket";
+          this.transport.pause(() => {
+            if (failed)
+              return;
+            if (this.readyState === "closed")
+              return;
+            cleanup();
+            this.setTransport(transport);
+            transport.send([{ type: "upgrade" }]);
+            this.emitReserved("upgrade", transport);
+            transport = null;
+            this.upgrading = false;
+            this.flush();
+          });
+        } else {
+          const err = new Error("probe error");
+          err.transport = transport.name;
+          this.emitReserved("upgradeError", err);
+        }
+      });
+    };
+    function freezeTransport() {
+      if (failed)
+        return;
+      failed = true;
+      cleanup();
+      transport.close();
+      transport = null;
+    }
+    const onerror = (err) => {
+      const error2 = new Error("probe error: " + err);
+      error2.transport = transport.name;
+      freezeTransport();
+      this.emitReserved("upgradeError", error2);
+    };
+    function onTransportClose() {
+      onerror("transport closed");
+    }
+    function onclose() {
+      onerror("socket closed");
+    }
+    function onupgrade(to) {
+      if (transport && to.name !== transport.name) {
+        freezeTransport();
+      }
+    }
+    const cleanup = () => {
+      transport.removeListener("open", onTransportOpen);
+      transport.removeListener("error", onerror);
+      transport.removeListener("close", onTransportClose);
+      this.off("close", onclose);
+      this.off("upgrading", onupgrade);
+    };
+    transport.once("open", onTransportOpen);
+    transport.once("error", onerror);
+    transport.once("close", onTransportClose);
+    this.once("close", onclose);
+    this.once("upgrading", onupgrade);
+    if (this._upgrades.indexOf("webtransport") !== -1 && name !== "webtransport") {
+      this.setTimeoutFn(() => {
+        if (!failed) {
+          transport.open();
+        }
+      }, 200);
+    } else {
+      transport.open();
+    }
+  }
+  onHandshake(data) {
+    this._upgrades = this._filterUpgrades(data.upgrades);
+    super.onHandshake(data);
+  }
+  _filterUpgrades(upgrades) {
+    const filteredUpgrades = [];
+    for (let i3 = 0;i3 < upgrades.length; i3++) {
+      if (~this.transports.indexOf(upgrades[i3]))
+        filteredUpgrades.push(upgrades[i3]);
+    }
+    return filteredUpgrades;
+  }
+}
+
+class Socket extends SocketWithUpgrade {
+  constructor(uri, opts = {}) {
+    const isOptionsOnly = typeof uri === "object";
+    const o3 = isOptionsOnly ? { ...uri } : { ...opts };
+    if (!o3.transports || o3.transports && typeof o3.transports[0] === "string") {
+      o3.transports = (o3.transports || ["polling", "websocket", "webtransport"]).map((transportName) => transports[transportName]).filter((t2) => !!t2);
+    }
+    super(isOptionsOnly ? o3 : uri, o3);
+  }
+}
+// node_modules/engine.io-client/build/esm/index.js
+var protocol2 = Socket.protocol;
+
+// node_modules/socket.io-client/build/esm/url.js
+function url(uri, path = "", loc) {
+  let obj = uri;
+  loc = loc || typeof location !== "undefined" && location;
+  if (uri == null)
+    uri = loc.protocol + "//" + loc.host;
+  if (typeof uri === "string") {
+    if (uri.charAt(0) === "/") {
+      if (uri.charAt(1) === "/") {
+        uri = loc.protocol + uri;
+      } else {
+        uri = loc.host + uri;
+      }
+    }
+    if (!/^(https?|wss?):\/\//.test(uri)) {
+      if (typeof loc !== "undefined") {
+        uri = loc.protocol + "//" + uri;
+      } else {
+        uri = "https://" + uri;
+      }
+    }
+    obj = parse(uri);
+  }
+  if (!obj.port) {
+    if (/^(http|ws)$/.test(obj.protocol)) {
+      obj.port = "80";
+    } else if (/^(http|ws)s$/.test(obj.protocol)) {
+      obj.port = "443";
+    }
+  }
+  obj.path = obj.path || "/";
+  const ipv6 = obj.host.indexOf(":") !== -1;
+  const host = ipv6 ? "[" + obj.host + "]" : obj.host;
+  obj.id = obj.protocol + "://" + host + ":" + obj.port + path;
+  obj.href = obj.protocol + "://" + host + (loc && loc.port === obj.port ? "" : ":" + obj.port);
+  return obj;
+}
+
+// node_modules/socket.io-parser/build/esm-debug/index.js
+var exports_esm_debug = {};
+__export(exports_esm_debug, {
+  protocol: () => protocol3,
+  isPacketValid: () => isPacketValid,
+  PacketType: () => PacketType,
+  Encoder: () => Encoder,
+  Decoder: () => Decoder
+});
+
+// node_modules/socket.io-parser/build/esm-debug/is-binary.js
+var withNativeArrayBuffer3 = typeof ArrayBuffer === "function";
+var isView2 = (obj) => {
+  return typeof ArrayBuffer.isView === "function" ? ArrayBuffer.isView(obj) : obj.buffer instanceof ArrayBuffer;
+};
+var toString = Object.prototype.toString;
+var withNativeBlob2 = typeof Blob === "function" || typeof Blob !== "undefined" && toString.call(Blob) === "[object BlobConstructor]";
+var withNativeFile = typeof File === "function" || typeof File !== "undefined" && toString.call(File) === "[object FileConstructor]";
+function isBinary(obj) {
+  return withNativeArrayBuffer3 && (obj instanceof ArrayBuffer || isView2(obj)) || withNativeBlob2 && obj instanceof Blob || withNativeFile && obj instanceof File;
+}
+function hasBinary(obj, toJSON2) {
+  if (!obj || typeof obj !== "object") {
+    return false;
+  }
+  if (Array.isArray(obj)) {
+    for (let i3 = 0, l2 = obj.length;i3 < l2; i3++) {
+      if (hasBinary(obj[i3])) {
+        return true;
+      }
+    }
+    return false;
+  }
+  if (isBinary(obj)) {
+    return true;
+  }
+  if (obj.toJSON && typeof obj.toJSON === "function" && arguments.length === 1) {
+    return hasBinary(obj.toJSON(), true);
+  }
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key) && hasBinary(obj[key])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// node_modules/socket.io-parser/build/esm-debug/binary.js
+function deconstructPacket(packet) {
+  const buffers = [];
+  const packetData = packet.data;
+  const pack = packet;
+  pack.data = _deconstructPacket(packetData, buffers);
+  pack.attachments = buffers.length;
+  return { packet: pack, buffers };
+}
+function _deconstructPacket(data, buffers, toJSON2) {
+  if (!data)
+    return data;
+  if (isBinary(data)) {
+    const placeholder = { _placeholder: true, num: buffers.length };
+    buffers.push(data);
+    return placeholder;
+  } else if (Array.isArray(data)) {
+    const newData = new Array(data.length);
+    for (let i3 = 0;i3 < data.length; i3++) {
+      newData[i3] = _deconstructPacket(data[i3], buffers);
+    }
+    return newData;
+  } else if (typeof data === "object" && !(data instanceof Date)) {
+    if (data.toJSON && typeof data.toJSON === "function" && !toJSON2) {
+      return _deconstructPacket(data.toJSON(), buffers, true);
+    }
+    const newData = {};
+    for (const key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        newData[key] = _deconstructPacket(data[key], buffers);
+      }
+    }
+    return newData;
+  }
+  return data;
+}
+function reconstructPacket(packet, buffers) {
+  packet.data = _reconstructPacket(packet.data, buffers);
+  delete packet.attachments;
+  return packet;
+}
+function _reconstructPacket(data, buffers) {
+  if (!data)
+    return data;
+  if (data && data._placeholder === true) {
+    const isIndexValid = typeof data.num === "number" && data.num >= 0 && data.num < buffers.length;
+    if (isIndexValid) {
+      return buffers[data.num];
+    } else {
+      throw new Error("illegal attachments");
+    }
+  } else if (Array.isArray(data)) {
+    for (let i3 = 0;i3 < data.length; i3++) {
+      data[i3] = _reconstructPacket(data[i3], buffers);
+    }
+  } else if (typeof data === "object") {
+    for (const key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        data[key] = _reconstructPacket(data[key], buffers);
+      }
+    }
+  }
+  return data;
+}
+
+// node_modules/socket.io-parser/build/esm-debug/index.js
+var import_debug = __toESM(require_browser(), 1);
+var debug = import_debug.default("socket.io-parser");
+var RESERVED_EVENTS = [
+  "connect",
+  "connect_error",
+  "disconnect",
+  "disconnecting",
+  "newListener",
+  "removeListener"
+];
+var protocol3 = 5;
+var PacketType;
+(function(PacketType2) {
+  PacketType2[PacketType2["CONNECT"] = 0] = "CONNECT";
+  PacketType2[PacketType2["DISCONNECT"] = 1] = "DISCONNECT";
+  PacketType2[PacketType2["EVENT"] = 2] = "EVENT";
+  PacketType2[PacketType2["ACK"] = 3] = "ACK";
+  PacketType2[PacketType2["CONNECT_ERROR"] = 4] = "CONNECT_ERROR";
+  PacketType2[PacketType2["BINARY_EVENT"] = 5] = "BINARY_EVENT";
+  PacketType2[PacketType2["BINARY_ACK"] = 6] = "BINARY_ACK";
+})(PacketType || (PacketType = {}));
+
+class Encoder {
+  constructor(replacer) {
+    this.replacer = replacer;
+  }
+  encode(obj) {
+    debug("encoding packet %j", obj);
+    if (obj.type === PacketType.EVENT || obj.type === PacketType.ACK) {
+      if (hasBinary(obj)) {
+        return this.encodeAsBinary({
+          type: obj.type === PacketType.EVENT ? PacketType.BINARY_EVENT : PacketType.BINARY_ACK,
+          nsp: obj.nsp,
+          data: obj.data,
+          id: obj.id
+        });
+      }
+    }
+    return [this.encodeAsString(obj)];
+  }
+  encodeAsString(obj) {
+    let str = "" + obj.type;
+    if (obj.type === PacketType.BINARY_EVENT || obj.type === PacketType.BINARY_ACK) {
+      str += obj.attachments + "-";
+    }
+    if (obj.nsp && obj.nsp !== "/") {
+      str += obj.nsp + ",";
+    }
+    if (obj.id != null) {
+      str += obj.id;
+    }
+    if (obj.data != null) {
+      str += JSON.stringify(obj.data, this.replacer);
+    }
+    debug("encoded %j as %s", obj, str);
+    return str;
+  }
+  encodeAsBinary(obj) {
+    const deconstruction = deconstructPacket(obj);
+    const pack = this.encodeAsString(deconstruction.packet);
+    const buffers = deconstruction.buffers;
+    buffers.unshift(pack);
+    return buffers;
+  }
+}
+
+class Decoder extends Emitter {
+  constructor(opts) {
+    super();
+    this.opts = Object.assign({
+      reviver: undefined,
+      maxAttachments: 10
+    }, typeof opts === "function" ? { reviver: opts } : opts);
+  }
+  add(obj) {
+    let packet;
+    if (typeof obj === "string") {
+      if (this.reconstructor) {
+        throw new Error("got plaintext data when reconstructing a packet");
+      }
+      packet = this.decodeString(obj);
+      const isBinaryEvent = packet.type === PacketType.BINARY_EVENT;
+      if (isBinaryEvent || packet.type === PacketType.BINARY_ACK) {
+        packet.type = isBinaryEvent ? PacketType.EVENT : PacketType.ACK;
+        this.reconstructor = new BinaryReconstructor(packet);
+      } else {
+        super.emitReserved("decoded", packet);
+      }
+    } else if (isBinary(obj) || obj.base64) {
+      if (!this.reconstructor) {
+        throw new Error("got binary data when not reconstructing a packet");
+      } else {
+        packet = this.reconstructor.takeBinaryData(obj);
+        if (packet) {
+          this.reconstructor = null;
+          super.emitReserved("decoded", packet);
+        }
+      }
+    } else {
+      throw new Error("Unknown type: " + obj);
+    }
+  }
+  decodeString(str) {
+    let i3 = 0;
+    const p3 = {
+      type: Number(str.charAt(0))
+    };
+    if (PacketType[p3.type] === undefined) {
+      throw new Error("unknown packet type " + p3.type);
+    }
+    if (p3.type === PacketType.BINARY_EVENT || p3.type === PacketType.BINARY_ACK) {
+      const start = i3 + 1;
+      while (str.charAt(++i3) !== "-" && i3 != str.length) {}
+      const buf = str.substring(start, i3);
+      if (buf != Number(buf) || str.charAt(i3) !== "-") {
+        throw new Error("Illegal attachments");
+      }
+      const n = Number(buf);
+      if (!isInteger(n) || n < 1) {
+        throw new Error("Illegal attachments");
+      } else if (n > this.opts.maxAttachments) {
+        throw new Error("too many attachments");
+      }
+      p3.attachments = n;
+    }
+    if (str.charAt(i3 + 1) === "/") {
+      const start = i3 + 1;
+      while (++i3) {
+        const c2 = str.charAt(i3);
+        if (c2 === ",")
+          break;
+        if (i3 === str.length)
+          break;
+      }
+      p3.nsp = str.substring(start, i3);
+    } else {
+      p3.nsp = "/";
+    }
+    const next = str.charAt(i3 + 1);
+    if (next !== "" && Number(next) == next) {
+      const start = i3 + 1;
+      while (++i3) {
+        const c2 = str.charAt(i3);
+        if (c2 == null || Number(c2) != c2) {
+          --i3;
+          break;
+        }
+        if (i3 === str.length)
+          break;
+      }
+      p3.id = Number(str.substring(start, i3 + 1));
+    }
+    if (str.charAt(++i3)) {
+      const payload = this.tryParse(str.substr(i3));
+      if (Decoder.isPayloadValid(p3.type, payload)) {
+        p3.data = payload;
+      } else {
+        throw new Error("invalid payload");
+      }
+    }
+    debug("decoded %s as %j", str, p3);
+    return p3;
+  }
+  tryParse(str) {
+    try {
+      return JSON.parse(str, this.opts.reviver);
+    } catch (e2) {
+      return false;
+    }
+  }
+  static isPayloadValid(type, payload) {
+    switch (type) {
+      case PacketType.CONNECT:
+        return isObject(payload);
+      case PacketType.DISCONNECT:
+        return payload === undefined;
+      case PacketType.CONNECT_ERROR:
+        return typeof payload === "string" || isObject(payload);
+      case PacketType.EVENT:
+      case PacketType.BINARY_EVENT:
+        return Array.isArray(payload) && (typeof payload[0] === "number" || typeof payload[0] === "string" && RESERVED_EVENTS.indexOf(payload[0]) === -1);
+      case PacketType.ACK:
+      case PacketType.BINARY_ACK:
+        return Array.isArray(payload);
+    }
+  }
+  destroy() {
+    if (this.reconstructor) {
+      this.reconstructor.finishedReconstruction();
+      this.reconstructor = null;
+    }
+  }
+}
+
+class BinaryReconstructor {
+  constructor(packet) {
+    this.packet = packet;
+    this.buffers = [];
+    this.reconPack = packet;
+  }
+  takeBinaryData(binData) {
+    this.buffers.push(binData);
+    if (this.buffers.length === this.reconPack.attachments) {
+      const packet = reconstructPacket(this.reconPack, this.buffers);
+      this.finishedReconstruction();
+      return packet;
+    }
+    return null;
+  }
+  finishedReconstruction() {
+    this.reconPack = null;
+    this.buffers = [];
+  }
+}
+function isNamespaceValid(nsp) {
+  return typeof nsp === "string";
+}
+var isInteger = Number.isInteger || function(value2) {
+  return typeof value2 === "number" && isFinite(value2) && Math.floor(value2) === value2;
+};
+function isAckIdValid(id) {
+  return id === undefined || isInteger(id);
+}
+function isObject(value2) {
+  return Object.prototype.toString.call(value2) === "[object Object]";
+}
+function isDataValid(type, payload) {
+  switch (type) {
+    case PacketType.CONNECT:
+      return payload === undefined || isObject(payload);
+    case PacketType.DISCONNECT:
+      return payload === undefined;
+    case PacketType.EVENT:
+      return Array.isArray(payload) && (typeof payload[0] === "number" || typeof payload[0] === "string" && RESERVED_EVENTS.indexOf(payload[0]) === -1);
+    case PacketType.ACK:
+      return Array.isArray(payload);
+    case PacketType.CONNECT_ERROR:
+      return typeof payload === "string" || isObject(payload);
+    default:
+      return false;
+  }
+}
+function isPacketValid(packet) {
+  return isNamespaceValid(packet.nsp) && isAckIdValid(packet.id) && isDataValid(packet.type, packet.data);
+}
+
+// node_modules/socket.io-client/build/esm/on.js
+function on(obj, ev, fn) {
+  obj.on(ev, fn);
+  return function subDestroy() {
+    obj.off(ev, fn);
+  };
+}
+
+// node_modules/socket.io-client/build/esm/socket.js
+var RESERVED_EVENTS2 = Object.freeze({
+  connect: 1,
+  connect_error: 1,
+  disconnect: 1,
+  disconnecting: 1,
+  newListener: 1,
+  removeListener: 1
+});
+
+class Socket2 extends Emitter {
+  constructor(io, nsp, opts) {
+    super();
+    this.connected = false;
+    this.recovered = false;
+    this.receiveBuffer = [];
+    this.sendBuffer = [];
+    this._queue = [];
+    this._queueSeq = 0;
+    this.ids = 0;
+    this.acks = {};
+    this.flags = {};
+    this.io = io;
+    this.nsp = nsp;
+    if (opts && opts.auth) {
+      this.auth = opts.auth;
+    }
+    this._opts = Object.assign({}, opts);
+    if (this.io._autoConnect)
+      this.open();
+  }
+  get disconnected() {
+    return !this.connected;
+  }
+  subEvents() {
+    if (this.subs)
+      return;
+    const io = this.io;
+    this.subs = [
+      on(io, "open", this.onopen.bind(this)),
+      on(io, "packet", this.onpacket.bind(this)),
+      on(io, "error", this.onerror.bind(this)),
+      on(io, "close", this.onclose.bind(this))
+    ];
+  }
+  get active() {
+    return !!this.subs;
+  }
+  connect() {
+    if (this.connected)
+      return this;
+    this.subEvents();
+    if (!this.io["_reconnecting"])
+      this.io.open();
+    if (this.io._readyState === "open")
+      this.onopen();
+    return this;
+  }
+  open() {
+    return this.connect();
+  }
+  send(...args) {
+    args.unshift("message");
+    this.emit.apply(this, args);
+    return this;
+  }
+  emit(ev, ...args) {
+    var _a, _b, _c;
+    if (RESERVED_EVENTS2.hasOwnProperty(ev)) {
+      throw new Error('"' + ev.toString() + '" is a reserved event name');
+    }
+    args.unshift(ev);
+    if (this._opts.retries && !this.flags.fromQueue && !this.flags.volatile) {
+      this._addToQueue(args);
+      return this;
+    }
+    const packet = {
+      type: PacketType.EVENT,
+      data: args
+    };
+    packet.options = {};
+    packet.options.compress = this.flags.compress !== false;
+    if (typeof args[args.length - 1] === "function") {
+      const id = this.ids++;
+      const ack = args.pop();
+      this._registerAckCallback(id, ack);
+      packet.id = id;
+    }
+    const isTransportWritable = (_b = (_a = this.io.engine) === null || _a === undefined ? undefined : _a.transport) === null || _b === undefined ? undefined : _b.writable;
+    const isConnected = this.connected && !((_c = this.io.engine) === null || _c === undefined ? undefined : _c._hasPingExpired());
+    const discardPacket = this.flags.volatile && !isTransportWritable;
+    if (discardPacket) {} else if (isConnected) {
+      this.notifyOutgoingListeners(packet);
+      this.packet(packet);
+    } else {
+      this.sendBuffer.push(packet);
+    }
+    this.flags = {};
+    return this;
+  }
+  _registerAckCallback(id, ack) {
+    var _a;
+    const timeout = (_a = this.flags.timeout) !== null && _a !== undefined ? _a : this._opts.ackTimeout;
+    if (timeout === undefined) {
+      this.acks[id] = ack;
+      return;
+    }
+    const timer2 = this.io.setTimeoutFn(() => {
+      delete this.acks[id];
+      for (let i3 = 0;i3 < this.sendBuffer.length; i3++) {
+        if (this.sendBuffer[i3].id === id) {
+          this.sendBuffer.splice(i3, 1);
+        }
+      }
+      ack.call(this, new Error("operation has timed out"));
+    }, timeout);
+    const fn = (...args) => {
+      this.io.clearTimeoutFn(timer2);
+      ack.apply(this, args);
+    };
+    fn.withError = true;
+    this.acks[id] = fn;
+  }
+  emitWithAck(ev, ...args) {
+    return new Promise((resolve2, reject) => {
+      const fn = (arg1, arg2) => {
+        return arg1 ? reject(arg1) : resolve2(arg2);
+      };
+      fn.withError = true;
+      args.push(fn);
+      this.emit(ev, ...args);
+    });
+  }
+  _addToQueue(args) {
+    let ack;
+    if (typeof args[args.length - 1] === "function") {
+      ack = args.pop();
+    }
+    const packet = {
+      id: this._queueSeq++,
+      tryCount: 0,
+      pending: false,
+      args,
+      flags: Object.assign({ fromQueue: true }, this.flags)
+    };
+    args.push((err, ...responseArgs) => {
+      if (packet !== this._queue[0]) {}
+      const hasError = err !== null;
+      if (hasError) {
+        if (packet.tryCount > this._opts.retries) {
+          this._queue.shift();
+          if (ack) {
+            ack(err);
+          }
+        }
+      } else {
+        this._queue.shift();
+        if (ack) {
+          ack(null, ...responseArgs);
+        }
+      }
+      packet.pending = false;
+      return this._drainQueue();
+    });
+    this._queue.push(packet);
+    this._drainQueue();
+  }
+  _drainQueue(force = false) {
+    if (!this.connected || this._queue.length === 0) {
+      return;
+    }
+    const packet = this._queue[0];
+    if (packet.pending && !force) {
+      return;
+    }
+    packet.pending = true;
+    packet.tryCount++;
+    this.flags = packet.flags;
+    this.emit.apply(this, packet.args);
+  }
+  packet(packet) {
+    packet.nsp = this.nsp;
+    this.io._packet(packet);
+  }
+  onopen() {
+    if (typeof this.auth == "function") {
+      this.auth((data) => {
+        this._sendConnectPacket(data);
+      });
+    } else {
+      this._sendConnectPacket(this.auth);
+    }
+  }
+  _sendConnectPacket(data) {
+    this.packet({
+      type: PacketType.CONNECT,
+      data: this._pid ? Object.assign({ pid: this._pid, offset: this._lastOffset }, data) : data
+    });
+  }
+  onerror(err) {
+    if (!this.connected) {
+      this.emitReserved("connect_error", err);
+    }
+  }
+  onclose(reason, description) {
+    this.connected = false;
+    delete this.id;
+    this.emitReserved("disconnect", reason, description);
+    this._clearAcks();
+  }
+  _clearAcks() {
+    Object.keys(this.acks).forEach((id) => {
+      const isBuffered = this.sendBuffer.some((packet) => String(packet.id) === id);
+      if (!isBuffered) {
+        const ack = this.acks[id];
+        delete this.acks[id];
+        if (ack.withError) {
+          ack.call(this, new Error("socket has been disconnected"));
+        }
+      }
+    });
+  }
+  onpacket(packet) {
+    const sameNamespace = packet.nsp === this.nsp;
+    if (!sameNamespace)
+      return;
+    switch (packet.type) {
+      case PacketType.CONNECT:
+        if (packet.data && packet.data.sid) {
+          this.onconnect(packet.data.sid, packet.data.pid);
+        } else {
+          this.emitReserved("connect_error", new Error("It seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)"));
+        }
+        break;
+      case PacketType.EVENT:
+      case PacketType.BINARY_EVENT:
+        this.onevent(packet);
+        break;
+      case PacketType.ACK:
+      case PacketType.BINARY_ACK:
+        this.onack(packet);
+        break;
+      case PacketType.DISCONNECT:
+        this.ondisconnect();
+        break;
+      case PacketType.CONNECT_ERROR:
+        this.destroy();
+        const err = new Error(packet.data.message);
+        err.data = packet.data.data;
+        this.emitReserved("connect_error", err);
+        break;
+    }
+  }
+  onevent(packet) {
+    const args = packet.data || [];
+    if (packet.id != null) {
+      args.push(this.ack(packet.id));
+    }
+    if (this.connected) {
+      this.emitEvent(args);
+    } else {
+      this.receiveBuffer.push(Object.freeze(args));
+    }
+  }
+  emitEvent(args) {
+    if (this._anyListeners && this._anyListeners.length) {
+      const listeners = this._anyListeners.slice();
+      for (const listener of listeners) {
+        listener.apply(this, args);
+      }
+    }
+    super.emit.apply(this, args);
+    if (this._pid && args.length && typeof args[args.length - 1] === "string") {
+      this._lastOffset = args[args.length - 1];
+    }
+  }
+  ack(id) {
+    const self2 = this;
+    let sent = false;
+    return function(...args) {
+      if (sent)
+        return;
+      sent = true;
+      self2.packet({
+        type: PacketType.ACK,
+        id,
+        data: args
+      });
+    };
+  }
+  onack(packet) {
+    const ack = this.acks[packet.id];
+    if (typeof ack !== "function") {
+      return;
+    }
+    delete this.acks[packet.id];
+    if (ack.withError) {
+      packet.data.unshift(null);
+    }
+    ack.apply(this, packet.data);
+  }
+  onconnect(id, pid) {
+    this.id = id;
+    this.recovered = pid && this._pid === pid;
+    this._pid = pid;
+    this.connected = true;
+    this.emitBuffered();
+    this._drainQueue(true);
+    this.emitReserved("connect");
+  }
+  emitBuffered() {
+    this.receiveBuffer.forEach((args) => this.emitEvent(args));
+    this.receiveBuffer = [];
+    this.sendBuffer.forEach((packet) => {
+      this.notifyOutgoingListeners(packet);
+      this.packet(packet);
+    });
+    this.sendBuffer = [];
+  }
+  ondisconnect() {
+    this.destroy();
+    this.onclose("io server disconnect");
+  }
+  destroy() {
+    if (this.subs) {
+      this.subs.forEach((subDestroy) => subDestroy());
+      this.subs = undefined;
+    }
+    this.io["_destroy"](this);
+  }
+  disconnect() {
+    if (this.connected) {
+      this.packet({ type: PacketType.DISCONNECT });
+    }
+    this.destroy();
+    if (this.connected) {
+      this.onclose("io client disconnect");
+    }
+    return this;
+  }
+  close() {
+    return this.disconnect();
+  }
+  compress(compress) {
+    this.flags.compress = compress;
+    return this;
+  }
+  get volatile() {
+    this.flags.volatile = true;
+    return this;
+  }
+  timeout(timeout) {
+    this.flags.timeout = timeout;
+    return this;
+  }
+  onAny(listener) {
+    this._anyListeners = this._anyListeners || [];
+    this._anyListeners.push(listener);
+    return this;
+  }
+  prependAny(listener) {
+    this._anyListeners = this._anyListeners || [];
+    this._anyListeners.unshift(listener);
+    return this;
+  }
+  offAny(listener) {
+    if (!this._anyListeners) {
+      return this;
+    }
+    if (listener) {
+      const listeners = this._anyListeners;
+      for (let i3 = 0;i3 < listeners.length; i3++) {
+        if (listener === listeners[i3]) {
+          listeners.splice(i3, 1);
+          return this;
+        }
+      }
+    } else {
+      this._anyListeners = [];
+    }
+    return this;
+  }
+  listenersAny() {
+    return this._anyListeners || [];
+  }
+  onAnyOutgoing(listener) {
+    this._anyOutgoingListeners = this._anyOutgoingListeners || [];
+    this._anyOutgoingListeners.push(listener);
+    return this;
+  }
+  prependAnyOutgoing(listener) {
+    this._anyOutgoingListeners = this._anyOutgoingListeners || [];
+    this._anyOutgoingListeners.unshift(listener);
+    return this;
+  }
+  offAnyOutgoing(listener) {
+    if (!this._anyOutgoingListeners) {
+      return this;
+    }
+    if (listener) {
+      const listeners = this._anyOutgoingListeners;
+      for (let i3 = 0;i3 < listeners.length; i3++) {
+        if (listener === listeners[i3]) {
+          listeners.splice(i3, 1);
+          return this;
+        }
+      }
+    } else {
+      this._anyOutgoingListeners = [];
+    }
+    return this;
+  }
+  listenersAnyOutgoing() {
+    return this._anyOutgoingListeners || [];
+  }
+  notifyOutgoingListeners(packet) {
+    if (this._anyOutgoingListeners && this._anyOutgoingListeners.length) {
+      const listeners = this._anyOutgoingListeners.slice();
+      for (const listener of listeners) {
+        listener.apply(this, packet.data);
+      }
+    }
+  }
+}
+
+// node_modules/socket.io-client/build/esm/contrib/backo2.js
+function Backoff(opts) {
+  opts = opts || {};
+  this.ms = opts.min || 100;
+  this.max = opts.max || 1e4;
+  this.factor = opts.factor || 2;
+  this.jitter = opts.jitter > 0 && opts.jitter <= 1 ? opts.jitter : 0;
+  this.attempts = 0;
+}
+Backoff.prototype.duration = function() {
+  var ms = this.ms * Math.pow(this.factor, this.attempts++);
+  if (this.jitter) {
+    var rand = Math.random();
+    var deviation = Math.floor(rand * this.jitter * ms);
+    ms = (Math.floor(rand * 10) & 1) == 0 ? ms - deviation : ms + deviation;
+  }
+  return Math.min(ms, this.max) | 0;
+};
+Backoff.prototype.reset = function() {
+  this.attempts = 0;
+};
+Backoff.prototype.setMin = function(min) {
+  this.ms = min;
+};
+Backoff.prototype.setMax = function(max) {
+  this.max = max;
+};
+Backoff.prototype.setJitter = function(jitter) {
+  this.jitter = jitter;
+};
+
+// node_modules/socket.io-client/build/esm/manager.js
+class Manager extends Emitter {
+  constructor(uri, opts) {
+    var _a;
+    super();
+    this.nsps = {};
+    this.subs = [];
+    if (uri && typeof uri === "object") {
+      opts = uri;
+      uri = undefined;
+    }
+    opts = opts || {};
+    opts.path = opts.path || "/socket.io";
+    this.opts = opts;
+    installTimerFunctions(this, opts);
+    this.reconnection(opts.reconnection !== false);
+    this.reconnectionAttempts(opts.reconnectionAttempts || Infinity);
+    this.reconnectionDelay(opts.reconnectionDelay || 1000);
+    this.reconnectionDelayMax(opts.reconnectionDelayMax || 5000);
+    this.randomizationFactor((_a = opts.randomizationFactor) !== null && _a !== undefined ? _a : 0.5);
+    this.backoff = new Backoff({
+      min: this.reconnectionDelay(),
+      max: this.reconnectionDelayMax(),
+      jitter: this.randomizationFactor()
+    });
+    this.timeout(opts.timeout == null ? 20000 : opts.timeout);
+    this._readyState = "closed";
+    this.uri = uri;
+    const _parser = opts.parser || exports_esm_debug;
+    this.encoder = new _parser.Encoder;
+    this.decoder = new _parser.Decoder;
+    this._autoConnect = opts.autoConnect !== false;
+    if (this._autoConnect)
+      this.open();
+  }
+  reconnection(v) {
+    if (!arguments.length)
+      return this._reconnection;
+    this._reconnection = !!v;
+    if (!v) {
+      this.skipReconnect = true;
+    }
+    return this;
+  }
+  reconnectionAttempts(v) {
+    if (v === undefined)
+      return this._reconnectionAttempts;
+    this._reconnectionAttempts = v;
+    return this;
+  }
+  reconnectionDelay(v) {
+    var _a;
+    if (v === undefined)
+      return this._reconnectionDelay;
+    this._reconnectionDelay = v;
+    (_a = this.backoff) === null || _a === undefined || _a.setMin(v);
+    return this;
+  }
+  randomizationFactor(v) {
+    var _a;
+    if (v === undefined)
+      return this._randomizationFactor;
+    this._randomizationFactor = v;
+    (_a = this.backoff) === null || _a === undefined || _a.setJitter(v);
+    return this;
+  }
+  reconnectionDelayMax(v) {
+    var _a;
+    if (v === undefined)
+      return this._reconnectionDelayMax;
+    this._reconnectionDelayMax = v;
+    (_a = this.backoff) === null || _a === undefined || _a.setMax(v);
+    return this;
+  }
+  timeout(v) {
+    if (!arguments.length)
+      return this._timeout;
+    this._timeout = v;
+    return this;
+  }
+  maybeReconnectOnOpen() {
+    if (!this._reconnecting && this._reconnection && this.backoff.attempts === 0) {
+      this.reconnect();
+    }
+  }
+  open(fn) {
+    if (~this._readyState.indexOf("open"))
+      return this;
+    this.engine = new Socket(this.uri, this.opts);
+    const socket = this.engine;
+    const self2 = this;
+    this._readyState = "opening";
+    this.skipReconnect = false;
+    const openSubDestroy = on(socket, "open", function() {
+      self2.onopen();
+      fn && fn();
+    });
+    const onError = (err) => {
+      this.cleanup();
+      this._readyState = "closed";
+      this.emitReserved("error", err);
+      if (fn) {
+        fn(err);
+      } else {
+        this.maybeReconnectOnOpen();
+      }
+    };
+    const errorSub = on(socket, "error", onError);
+    if (this._timeout !== false) {
+      const timeout = this._timeout;
+      const timer2 = this.setTimeoutFn(() => {
+        openSubDestroy();
+        onError(new Error("timeout"));
+        socket.close();
+      }, timeout);
+      if (this.opts.autoUnref) {
+        timer2.unref();
+      }
+      this.subs.push(() => {
+        this.clearTimeoutFn(timer2);
+      });
+    }
+    this.subs.push(openSubDestroy);
+    this.subs.push(errorSub);
+    return this;
+  }
+  connect(fn) {
+    return this.open(fn);
+  }
+  onopen() {
+    this.cleanup();
+    this._readyState = "open";
+    this.emitReserved("open");
+    const socket = this.engine;
+    this.subs.push(on(socket, "ping", this.onping.bind(this)), on(socket, "data", this.ondata.bind(this)), on(socket, "error", this.onerror.bind(this)), on(socket, "close", this.onclose.bind(this)), on(this.decoder, "decoded", this.ondecoded.bind(this)));
+  }
+  onping() {
+    this.emitReserved("ping");
+  }
+  ondata(data) {
+    try {
+      this.decoder.add(data);
+    } catch (e2) {
+      this.onclose("parse error", e2);
+    }
+  }
+  ondecoded(packet) {
+    nextTick(() => {
+      this.emitReserved("packet", packet);
+    }, this.setTimeoutFn);
+  }
+  onerror(err) {
+    this.emitReserved("error", err);
+  }
+  socket(nsp, opts) {
+    let socket = this.nsps[nsp];
+    if (!socket) {
+      socket = new Socket2(this, nsp, opts);
+      this.nsps[nsp] = socket;
+    } else if (this._autoConnect && !socket.active) {
+      socket.connect();
+    }
+    return socket;
+  }
+  _destroy(socket) {
+    const nsps = Object.keys(this.nsps);
+    for (const nsp of nsps) {
+      const socket2 = this.nsps[nsp];
+      if (socket2.active) {
+        return;
+      }
+    }
+    this._close();
+  }
+  _packet(packet) {
+    const encodedPackets = this.encoder.encode(packet);
+    for (let i3 = 0;i3 < encodedPackets.length; i3++) {
+      this.engine.write(encodedPackets[i3], packet.options);
+    }
+  }
+  cleanup() {
+    this.subs.forEach((subDestroy) => subDestroy());
+    this.subs.length = 0;
+    this.decoder.destroy();
+  }
+  _close() {
+    this.skipReconnect = true;
+    this._reconnecting = false;
+    this.onclose("forced close");
+  }
+  disconnect() {
+    return this._close();
+  }
+  onclose(reason, description) {
+    var _a;
+    this.cleanup();
+    (_a = this.engine) === null || _a === undefined || _a.close();
+    this.backoff.reset();
+    this._readyState = "closed";
+    this.emitReserved("close", reason, description);
+    if (this._reconnection && !this.skipReconnect) {
+      this.reconnect();
+    }
+  }
+  reconnect() {
+    if (this._reconnecting || this.skipReconnect)
+      return this;
+    const self2 = this;
+    if (this.backoff.attempts >= this._reconnectionAttempts) {
+      this.backoff.reset();
+      this.emitReserved("reconnect_failed");
+      this._reconnecting = false;
+    } else {
+      const delay = this.backoff.duration();
+      this._reconnecting = true;
+      const timer2 = this.setTimeoutFn(() => {
+        if (self2.skipReconnect)
+          return;
+        this.emitReserved("reconnect_attempt", self2.backoff.attempts);
+        if (self2.skipReconnect)
+          return;
+        self2.open((err) => {
+          if (err) {
+            self2._reconnecting = false;
+            self2.reconnect();
+            this.emitReserved("reconnect_error", err);
+          } else {
+            self2.onreconnect();
+          }
+        });
+      }, delay);
+      if (this.opts.autoUnref) {
+        timer2.unref();
+      }
+      this.subs.push(() => {
+        this.clearTimeoutFn(timer2);
+      });
+    }
+  }
+  onreconnect() {
+    const attempt = this.backoff.attempts;
+    this._reconnecting = false;
+    this.backoff.reset();
+    this.emitReserved("reconnect", attempt);
+  }
+}
+
+// node_modules/socket.io-client/build/esm/index.js
+var cache = {};
+function lookup2(uri, opts) {
+  if (typeof uri === "object") {
+    opts = uri;
+    uri = undefined;
+  }
+  opts = opts || {};
+  const parsed = url(uri, opts.path || "/socket.io");
+  const source = parsed.source;
+  const id = parsed.id;
+  const path = parsed.path;
+  const sameNamespace = cache[id] && path in cache[id]["nsps"];
+  const newConnection = opts.forceNew || opts["force new connection"] || opts.multiplex === false || sameNamespace;
+  let io;
+  if (newConnection) {
+    io = new Manager(source, opts);
+  } else {
+    if (!cache[id]) {
+      cache[id] = new Manager(source, opts);
+    }
+    io = cache[id];
+  }
+  if (parsed.query && !opts.query) {
+    opts.query = parsed.queryKey;
+  }
+  return io.socket(parsed.path, opts);
+}
+Object.assign(lookup2, {
+  Manager,
+  Socket: Socket2,
+  io: lookup2,
+  connect: lookup2
+});
+
+// src/utilities/flightDataUtils.ts
 var parseRawState = (state2) => {
   if (Array.isArray(state2)) {
     const [
@@ -74107,179 +77303,153 @@ var formatAircraftData = (apiResponse) => {
   });
   return result;
 };
-var fetchAccessToken = async (clientId, clientSecret) => {
-  const url = "/auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
-  const params = new URLSearchParams;
-  params.append("grant_type", "client_credentials");
-  params.append("client_id", clientId);
-  params.append("client_secret", clientSecret);
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: params
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  const data = await response.json();
-  return data.access_token;
-};
-var fetchAircraftData = async (token, position) => {
-  console.log("position", position);
-  let latmax = TOULOUSE_LATMAX;
-  let lonmax = TOULOUSE_LONMAX;
-  let lonmin = TOULOUSE_LONMIN;
-  let latmin = TOULOUSE_LATMIN;
-  if (position) {
-    latmin = position.latitude - BOUNDING_BOX_HEIGHT / 2;
-    latmax = position.latitude + BOUNDING_BOX_HEIGHT / 2;
-    lonmin = position.longitude - BOUNDING_BOX_WIDTH / 2;
-    lonmax = position.longitude + BOUNDING_BOX_WIDTH / 2;
-  }
-  const url = `/opensky-network.org/api/states/all?lamax=${latmax}&lomax=${lonmax}&lamin=${latmin}&lomin=${lonmin}`;
+
+// src/api/fetchNewFlights.ts
+async function fetchNewFlights(params) {
   try {
-    const response = await fetch(url, {
+    const response = await fetch("/api/aircraft/position", {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        lat: params.observer_position.latitude,
+        lon: params.observer_position.longitude,
+        radius_km: params.radius || 100
+      })
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    return data;
-  } catch (error2) {
-    console.error("Error fetching data:", error2);
-    return null;
+    return formatAircraftData(data);
+  } catch (err) {
+    console.error("Error fetching aircraft data:", err);
+    throw err;
   }
-};
-var AircraftDataContext = import_react18.createContext(undefined);
-var AircraftDataProvider = ({ children }) => {
-  const [secrets, setSecrets] = import_react18.useState(null);
-  const [secretsError, setSecretsError] = import_react18.useState(null);
-  const [tokenCache, setTokenCache] = import_react18.useState(null);
-  const [formattedAircraftData, setFormattedAircraftData] = import_react18.useState({});
-  const [isLoading, setIsLoading] = import_react18.useState(true);
-  const [error2, setError] = import_react18.useState(null);
-  import_react18.useEffect(() => {
-    const loadSecrets = async () => {
-      try {
-        const response = await fetch("/secrets.json?v=" + Date.now());
-        if (!response.ok) {
-          throw new Error(`Failed to load secrets.json: ${response.status}`);
-        }
-        const data = await response.json();
-        if (typeof data.clientId !== "string" || !data.clientId) {
-          throw new Error("Client ID is not a valid string or is null");
-        }
-        if (typeof data.clientSecret !== "string" || !data.clientSecret) {
-          throw new Error("Client Secret is not a valid string or is null");
-        }
-        setSecrets(data);
-      } catch (err) {
-        setSecretsError(err instanceof Error ? err.message : "Unknown error loading secrets");
-        console.error("Error loading secrets.json:", err);
-      }
-    };
-    loadSecrets();
-  }, []);
-  const getToken = import_react18.useCallback(async () => {
-    if (!secrets) {
-      throw new Error("Secrets not loaded yet");
+}
+
+// src/store/useWebSocketStore.ts
+var SOCKET_IO_PATH = "/api/ws";
+var useWebSocketStore = create((set, get) => ({
+  socket: null,
+  socketReadyState: "disconnected",
+  error: null,
+  flights: {},
+  isLoading: false,
+  fetchAndUpdateData: async (params) => {
+    set({ isLoading: true, error: null });
+    try {
+      const formattedData = await fetchNewFlights(params);
+      set({ flights: formattedData });
+    } catch (err) {
+      console.error("Error fetching aircraft data:", err);
+      set({ error: err instanceof Error ? err.message : "Unknown error" });
+    } finally {
+      set({ isLoading: false });
     }
-    const now2 = new Date;
-    if (tokenCache) {
-      const creationDate = new Date(tokenCache.creation_date);
-      const ageMinutes = (now2.getTime() - creationDate.getTime()) / (1000 * 60);
-      if (ageMinutes < TOKEN_EXPIRY_MINUTES && tokenCache.access_token) {
-        return tokenCache.access_token;
-      }
-    }
-    const newToken = await fetchAccessToken(secrets.clientId, secrets.clientSecret);
-    setTokenCache({
-      access_token: newToken,
-      creation_date: now2.toISOString()
-    });
-    return newToken;
-  }, [secrets, tokenCache]);
-  const fetchAndUpdateData = import_react18.useCallback(async (position) => {
-    if (!secrets) {
-      setError("Secrets not loaded");
+  },
+  reconnect: () => {
+    const { socket } = get();
+    if (socket && socket.connected) {
       return;
     }
-    setIsLoading(true);
-    setError(null);
+    set({ socketReadyState: "connecting", error: null });
     try {
-      const token = await getToken();
-      const aircrafts = await fetchAircraftData(token, position);
-      const formattedData = formatAircraftData(aircrafts);
-      setFormattedAircraftData(formattedData);
+      if (socket) {
+        socket.disconnect();
+      }
+      const newSocket = lookup2("", {
+        path: SOCKET_IO_PATH,
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        timeout: 20000
+      });
+      newSocket.on("connect", () => {
+        console.log("Socket.IO connected at", Date.now());
+        set({ socketReadyState: "connected", socket: newSocket });
+      });
+      newSocket.on("disconnect", () => {
+        console.log("Socket.IO disconnected", Date.now());
+        set({ socketReadyState: "disconnected" });
+      });
+      newSocket.on("connect_error", (err) => {
+        console.error("Socket.IO connection error:", err);
+        set({ socketReadyState: "error", error: "Socket.IO connection error" });
+      });
+      newSocket.on("aircraft_data", (data) => {
+        try {
+          const aircraftData = data;
+          const formattedData = formatAircraftData(aircraftData);
+          set({ flights: formattedData });
+        } catch (err) {
+          console.error("Error parsing aircraft_data message:", err);
+          set({ error: "Failed to parse aircraft data" });
+        }
+      });
+      newSocket.on("heartbeat_predictions", () => {
+        console.log("heartbeat");
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      console.error("Error in fetchAndUpdateData:", err);
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to create Socket.IO connection:", err);
+      set({ socketReadyState: "error", error: "Failed to create Socket.IO connection" });
     }
-  }, [getToken, secrets]);
-  import_react18.useEffect(() => {
-    if (secrets && !secretsError) {
-      fetchAndUpdateData();
+  },
+  disconnect: () => {
+    const { socket } = get();
+    if (socket) {
+      socket.disconnect();
+      set({ socket: null, socketReadyState: "disconnected" });
     }
-  }, [secrets, secretsError, fetchAndUpdateData]);
-  const value = {
-    token: tokenCache?.access_token ?? null,
-    formattedAircraftData,
-    isLoading: isLoading || secrets === null,
-    error: error2 || secretsError,
-    refresh: fetchAndUpdateData
-  };
-  return /* @__PURE__ */ jsx_dev_runtime15.jsxDEV(AircraftDataContext.Provider, {
-    value,
-    children
-  }, undefined, false, undefined, this);
-};
-var useAircraftData = () => {
-  const context2 = import_react18.useContext(AircraftDataContext);
-  if (context2 === undefined) {
-    throw new Error("useAircraftData must be used within an AircraftDataProvider");
   }
-  return context2;
-};
+}));
+
 // src/App.tsx
-var jsx_dev_runtime16 = __toESM(require_jsx_dev_runtime(), 1);
-function AppContent() {
+var jsx_dev_runtime14 = __toESM(require_jsx_dev_runtime(), 1);
+function App() {
   const setFlights = useStore2((state2) => state2.setFlights);
   const observerPosition = useStore2((state2) => state2.observerPosition);
-  const { error: aircraftDataError, formattedAircraftData, isLoading: aircraftDataLoading, refresh } = useAircraftData();
-  import_react19.useEffect(() => {
-    if (!aircraftDataLoading && !aircraftDataError && setFlights) {
-      setFlights(formattedAircraftData);
+  const searchRadius = useStore2((state2) => state2.searchRadius);
+  const controlsRef = import_react17.useRef(null);
+  const {
+    flights: wsFlights,
+    error: wsError,
+    isLoading: wsLoading,
+    fetchAndUpdateData,
+    reconnect,
+    socketReadyState
+  } = useWebSocketStore();
+  import_react17.useEffect(() => {
+    reconnect();
+    return () => {};
+  }, [reconnect]);
+  import_react17.useEffect(() => {
+    if (!wsLoading && !wsError && setFlights && wsFlights) {
+      setFlights(wsFlights);
     }
-  }, [aircraftDataLoading, formattedAircraftData, aircraftDataError, setFlights]);
-  import_react19.useEffect(() => {
+  }, [wsLoading, wsFlights, wsError, setFlights]);
+  import_react17.useEffect(() => {
     if (observerPosition) {
-      refresh(observerPosition);
+      fetchAndUpdateData({ observer_position: observerPosition, radius: searchRadius });
     }
-  }, [observerPosition, refresh]);
-  return /* @__PURE__ */ jsx_dev_runtime16.jsxDEV("div", {
-    className: "grid grid-cols-[10%_90%]",
+  }, [observerPosition, searchRadius, fetchAndUpdateData]);
+  return /* @__PURE__ */ jsx_dev_runtime14.jsxDEV("div", {
+    className: "grid grid-cols-[20rem_auto] h-screen",
     children: [
-      /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(Sidebar, {}, undefined, false, undefined, this),
-      /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(MainScene, {}, undefined, false, undefined, this)
+      /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(Sidebar, {
+        controlsRef
+      }, undefined, false, undefined, this),
+      /* @__PURE__ */ jsx_dev_runtime14.jsxDEV(MainScene, {
+        controlsRef
+      }, undefined, false, undefined, this)
     ]
   }, undefined, true, undefined, this);
-}
-function App() {
-  return /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(AircraftDataProvider, {
-    children: /* @__PURE__ */ jsx_dev_runtime16.jsxDEV(AppContent, {}, undefined, false, undefined, this)
-  }, undefined, false, undefined, this);
 }
 var App_default = App;
 
 // src/main.tsx
-var jsx_dev_runtime17 = __toESM(require_jsx_dev_runtime(), 1);
-import_client.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsx_dev_runtime17.jsxDEV(import_react20.StrictMode, {
-  children: /* @__PURE__ */ jsx_dev_runtime17.jsxDEV(App_default, {}, undefined, false, undefined, this)
+var jsx_dev_runtime15 = __toESM(require_jsx_dev_runtime(), 1);
+import_client.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsx_dev_runtime15.jsxDEV(import_react18.StrictMode, {
+  children: /* @__PURE__ */ jsx_dev_runtime15.jsxDEV(App_default, {}, undefined, false, undefined, this)
 }, undefined, false, undefined, this));

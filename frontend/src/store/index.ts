@@ -1,6 +1,3 @@
-export { useSerialPortStore } from './useSerialPortStore';
-export type {
-  SerialPortState,
-  SerialPortActions,
-  SerialPortStore,
-} from './useSerialPortStore';
+export { useStore } from './useStore';
+export type { Coordinates } from './useStore';
+export { useWebSocketStore } from './useWebSocketStore';

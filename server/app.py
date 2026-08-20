@@ -163,18 +163,10 @@ def heartbeat_loop():
         with heartbeat_lock:
             # Getting the freshest prediction data
             predictions = kalman_filter_service.get_latest_predictions()
-            # json_message = jsonify({
-            #     "predictions": predictions,
-            #     "count": len(predictions),
-            #     "timestamp": time.time()
-            # })
 
             # Send heartbeat to all connected clients
             for sid in list(connected_clients):
-                print("SENDING HEARTBEAT HELLO ????")
-                socketio.emit('heartbeat_predictions', "heartbeat", room=sid)
-                # websocket_logger.error(f"Error sending data to room {sid}: {e}")
-                # connected_clients.discard(sid)
+                socketio.emit('heartbeat', time.time(), room=sid)
         
         # Sleep for the heartbeat interval
         time.sleep(HEARTBEAT_INTERVAL)
