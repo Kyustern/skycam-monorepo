@@ -4,14 +4,12 @@ import { useStore } from '../../store/useStore'
 import { ObserverPositionForm } from './ObserverPositionForm'
 import type { FlightState } from '../../scripts/scrap-airplane'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { focusCameraOnGPS, animateCameraFocus } from '../../utilities/cameraUtils'
 
 type SidebarProps = {
   controlsRef?: React.RefObject<OrbitControlsImpl | null>
 }
 
 export const Sidebar = ({ controlsRef }: SidebarProps) => {
-  const observerPosition = useStore(state => state.observerPosition)
   const searchRadius = useStore(state => state.searchRadius)
   const setSearchRadius = useStore(state => state.setSearchRadius)
   const [darkTheme, setDarkTheme] = useState(false)
@@ -31,8 +29,6 @@ export const Sidebar = ({ controlsRef }: SidebarProps) => {
     }
   }, [darkTheme])
 
-
-  console.log('LTES - selectedFlight', selectedFlight);
 
   const handleFlightSelect = (flight: FlightState) => {
     setSelectedFlight(flight)

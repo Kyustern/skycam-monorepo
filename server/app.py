@@ -149,8 +149,10 @@ def cleanup_serial():
 
 def signal_handler(sig, frame):
     """Handle shutdown signals gracefully."""
-    serial_logger.info(f"Received signal {sig}, shutting down...")
+    server_logger.info(f"Received signal {sig}, shutting down...")
     cleanup_serial()
+    kalman_filter_service.stop()
+    stop_heartbeat()
     sys.exit(0)
 
 
@@ -499,9 +501,14 @@ if __name__ == '__main__':
         websocket_logger.info("Starting heartbeat service...")
         start_heartbeat()
         
-        # Start Kalman filter service
-        server_logger.info("Starting Kalman filter service on server startup...")
-        kalman_filter_service.start()
+        # Start Kalman filter service (only in main worker process, not reloader)
+        # Flask's reloader sets WERKZEUG_RUN_MAIN='true' in the worker process
+        is_main_worker = os.environ.get('WERKZEUG_RUN_MAIN') == 'true'
+        if is_main_worker:
+            server_logger.info("Starting Kalman filter service on server startup...")
+            kalman_filter_service.start()
+        else:
+            server_logger.info("Skipping Kalman filter service start (Flask reloader process)")
         
         socketio.run(app, host='0.0.0.0', port=5000, debug=True)
     finally:

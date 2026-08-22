@@ -4,12 +4,12 @@ import { useRef, useEffect, useMemo } from "react"
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useStore } from "../../store/useStore"
 import { AirplaneMarker } from "../AirplaneMarker"
+import { PredictionMarker } from "../PredictionMarker"
 import { AzimuthAngleOverlay } from "../AzimuthAngleOverlay"
 import { ConnectionLine } from "../ConnectionLine"
 import { EarthCities } from "../EarthCities"
 import { EarthGrid } from "../EarthGrid"
 import { ObserverMarker } from "../ObserverMarker"
-import { Earth } from "../SpinningEarth"
 import { AngleDisplay } from "../layout/AngleDisplay"
 import { HumidityVisibilityDisplay } from "../layout/HumidityVisibilityDisplay"
 import { ZoomControl } from "../layout/ZoomControl"
@@ -117,6 +117,7 @@ export const MainScene = ({ controlsRef }: MainSceneProps) => {
                     <EarthCities />
                     <ObserverMarker />
                     <AirplaneMarker />
+                    <PredictionMarker />
                     <ConnectionLine />
                     <AzimuthAngleOverlay />
                     </EarthMesh>
