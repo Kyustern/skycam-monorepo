@@ -319,6 +319,119 @@ class KalmanVisualizer:
         
         return fig
     
+    def plot_3d_trajectory_interactive(
+        self,
+        trajectory: pd.DataFrame,
+        callsign: str = "Unknown",
+        width: int = 900,
+        height: int = 700
+    ) -> Any:
+        """
+        Create an interactive 3D plot for altitude analysis using Plotly.
+        
+        This creates a fully interactive 3D visualization that can be rotated,
+        zoomed, and panned in the notebook.
+        
+        Args:
+            trajectory: DataFrame with trajectory data
+            callsign: Aircraft callsign
+            width: Figure width in pixels
+            height: Figure height in pixels
+            
+        Returns:
+            Plotly Figure object (or None if Plotly not available)
+        """
+        try:
+            import plotly.graph_objects as go
+            from plotly.subplots import make_subplots
+        except ImportError:
+            print("Plotly not available. Install with: pip install plotly")
+            return None
+        
+        if len(trajectory) == 0:
+            print(f"No data for interactive 3D trajectory: {callsign}")
+            return None
+        
+        # Normalize timestamps for color mapping (0 to 1)
+        t_min = trajectory['timestamp'].min()
+        t_max = trajectory['timestamp'].max()
+        normalized_time = (trajectory['timestamp'] - t_min) / (t_max - t_min) if t_max > t_min else 0
+        
+        # Create 3D scatter plot with line
+        fig = go.Figure()
+        
+        # Add trajectory line
+        fig.add_trace(go.Scatter3d(
+            x=trajectory['longitude'],
+            y=trajectory['latitude'],
+            z=trajectory['baro_altitude'] / 1000,  # Convert to km
+            mode='lines',
+            line=dict(color='blue', width=3),
+            name='Trajectory'
+        ))
+        
+        # Add points colored by time
+        fig.add_trace(go.Scatter3d(
+            x=trajectory['longitude'],
+            y=trajectory['latitude'],
+            z=trajectory['baro_altitude'] / 1000,
+            mode='markers',
+            marker=dict(
+                size=5,
+                color=normalized_time,
+                colorscale='Viridis',
+                opacity=0.7,
+                colorbar=dict(title='Time')
+            ),
+            name='Positions'
+        ))
+        
+        # Add start marker
+        fig.add_trace(go.Scatter3d(
+            x=[trajectory.iloc[0]['longitude']],
+            y=[trajectory.iloc[0]['latitude']],
+            z=[trajectory.iloc[0]['baro_altitude'] / 1000],
+            mode='markers',
+            marker=dict(
+                size=10,
+                color='green',
+                symbol='diamond'
+            ),
+            name='Start'
+        ))
+        
+        # Add end marker
+        fig.add_trace(go.Scatter3d(
+            x=[trajectory.iloc[-1]['longitude']],
+            y=[trajectory.iloc[-1]['latitude']],
+            z=[trajectory.iloc[-1]['baro_altitude'] / 1000],
+            mode='markers',
+            marker=dict(
+                size=10,
+                color='red',
+                symbol='diamond'
+            ),
+            name='End'
+        ))
+        
+        # Configure layout
+        fig.update_layout(
+            title=f'Interactive 3D Trajectory: {callsign}',
+            scene=dict(
+                xaxis_title='Longitude (degrees)',
+                yaxis_title='Latitude (degrees)',
+                zaxis_title='Altitude (km)',
+                camera=dict(
+                    eye=dict(x=1.5, y=1.5, z=1.3)
+                )
+            ),
+            width=width,
+            height=height,
+            showlegend=True
+        )
+        
+        return fig
+    
     # ========================================================================
     # KALMAN FILTER PERFORMANCE VISUALIZATION
     # ========================================================================
@@ -1128,3 +1241,8 @@ def plot_histograms(data: pd.DataFrame, columns: List[str], **kwargs) -> Tuple[F
 def plot_scatter(data: pd.DataFrame, x_col: str, y_col: str, **kwargs) -> Tuple[Figure, Axes]:
     """Convenience function to create scatter plot."""
     return kalman_visualizer.plot_scatter_correlation(data, x_col, y_col, **kwargs)
+
+
+def plot_3d_trajectory_interactive(trajectory: pd.DataFrame, **kwargs) -> Any:
+    """Convenience function to create interactive 3D trajectory plot."""
+    return kalman_visualizer.plot_3d_trajectory_interactive(trajectory, **kwargs)

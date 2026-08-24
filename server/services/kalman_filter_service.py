@@ -136,7 +136,7 @@ class KalmanFilterService:
     DATA_UPDATE_INTERVAL = 10.0
     
     # Prediction interval
-    PREDICTION_INTERVAL = 0.5
+    PREDICTION_INTERVAL = 2.0
     
     # Maximum time without measurement before marking as lost (30 seconds)
     MAX_MEASUREMENT_AGE = 60.0

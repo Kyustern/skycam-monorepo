@@ -16,7 +16,7 @@ ipykernel>=7.0.0
 ipywidgets>=8.0.0
 
 # Optional: Interactive visualizations
-# plotly>=5.0.0
+plotly>=5.0.0
 # folium>=0.14.0
 
 # Optional: Geospatial analysis
