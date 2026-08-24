@@ -1,0 +1,35 @@
+# Jupyter Notebook Dependencies for TURRET Data Analysis
+# Python 3.14+ required
+
+# Core data science stack
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+scipy>=1.10.0
+
+# Jupyter ecosystem
+jupyter>=1.0.0
+jupyterlab>=4.0.0
+ipython>=8.0.0
+ipykernel>=7.0.0
+ipywidgets>=8.0.0
+
+# Optional: Interactive visualizations
+# plotly>=5.0.0
+# folium>=0.14.0
+
+# Optional: Geospatial analysis
+# cartopy>=0.21.0
+
+# Optional: Efficient I/O
+# pyarrow>=1.0.0
+
+# Optional: HDF5 support (for .h5 capture files)
+# h5py>=3.8.0
+
+# Development
+# pytest>=7.0.0
+# black>=23.0.0
+# mypy>=1.0.0
+# tqdm>=4.64.0

@@ -51,6 +51,7 @@ wheels/
 .venv/
 env/
 ENV/
+notebooks/venv/
 
 # Secrets and API keys
 frontend/secrets.json
@@ -81,3 +82,4 @@ temp/
 
 #Server
 server/secrets.json
+captures

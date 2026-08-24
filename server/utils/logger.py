@@ -107,6 +107,8 @@ serial_logger = ServiceLogger("SERIAL")
 websocket_logger = ServiceLogger("WEBSOCKET")
 turret_logger = ServiceLogger("TURRET")
 server_logger = ServiceLogger("SERVER")
+capture_logger = ServiceLogger("CAPTURE")
+storage_logger = ServiceLogger("STORAGE")
 
 
 # Global default logger (can be used when service context is unknown)

@@ -11,6 +11,7 @@ import signal
 import sys
 from services.aircraft_service import aircraft_service
 from services.kalman_filter_service import kalman_filter_service
+from services.data_capture_service import data_capture_service
 from utils.logger import serial_logger, websocket_logger, server_logger
 
 app = Flask(__name__, static_folder='static')
@@ -466,6 +467,91 @@ def stop_kalman_service():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+# Data Capture Service Endpoints
+
+@app.route('/api/capture/status', methods=['GET'])
+def get_capture_status():
+    """
+    Get the current status of the data capture service.
+    
+    Returns:
+        Dictionary with service status information
+    """
+    try:
+        status = data_capture_service.get_status()
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route('/api/capture/files', methods=['GET'])
+def get_capture_files():
+    """
+    Get a list of all capture files.
+    
+    Returns:
+        Dictionary with list of files and count
+    """
+    try:
+        files = data_capture_service.get_capture_files()
+        return jsonify({"files": files, "count": len(files)}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route('/api/capture/start', methods=['POST'])
+def start_capture():
+    """
+    Start the data capture service.
+    """
+    try:
+        data_capture_service.start()
+        return jsonify({
+            "status": "started",
+            "message": "Data capture service started"
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route('/api/capture/stop', methods=['POST'])
+def stop_capture():
+    """
+    Stop the data capture service.
+    """
+    try:
+        data_capture_service.stop()
+        status = data_capture_service.get_status()
+        return jsonify({
+            "status": "stopped",
+            "message": "Data capture service stopped",
+            "frames_captured": status["frames_captured"],
+            "file": status["current_file"]
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route('/api/capture/config', methods=['GET'])
+def get_capture_config():
+    """
+    Get the current configuration of the capture service.
+    
+    Returns:
+        Dictionary with configuration and Kalman filter settings
+    """
+    try:
+        config = {
+            "capture_dir": data_capture_service.CAPTURE_DIR,
+            "session_duration": data_capture_service.SESSION_DURATION,
+            "max_file_size": data_capture_service.MAX_FILE_SIZE,
+            "kalman_config": kalman_filter_service.get_statistics()
+        }
+        return jsonify(config), 200
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 # Serve React App - Static files
 # This catch-all must come AFTER all API routes
 # In development, the frontend is served from Vite on port 5173
@@ -507,12 +593,18 @@ if __name__ == '__main__':
         if is_main_worker:
             server_logger.info("Starting Kalman filter service on server startup...")
             kalman_filter_service.start()
+            
+            # Start data capture service
+            server_logger.info("Starting data capture service on server startup...")
+            data_capture_service.start()
         else:
             server_logger.info("Skipping Kalman filter service start (Flask reloader process)")
+            server_logger.info("Skipping data capture service start (Flask reloader process)")
         
         socketio.run(app, host='0.0.0.0', port=5000, debug=True)
     finally:
         # Ensure cleanup on any exit
         cleanup_serial()
         kalman_filter_service.stop()
+        data_capture_service.stop()
         stop_heartbeat()
