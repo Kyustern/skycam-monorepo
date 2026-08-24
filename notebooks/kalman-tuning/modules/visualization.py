@@ -343,7 +343,7 @@ class KalmanVisualizer:
         """
         try:
             import plotly.graph_objects as go
-            from plotly.subplots import make_subplots
+            # from plotly.subplots import make_subplots
         except ImportError:
             print("Plotly not available. Install with: pip install plotly")
             return None
