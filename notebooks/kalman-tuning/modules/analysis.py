@@ -1517,6 +1517,130 @@ class KalmanAnalysis:
             k: priority_map.get(k, 'LOW')
             for k, v in recommendations.items()
         }
+    
+    # ========================================================================
+    # LOOP TIMING ANALYSIS
+    # ========================================================================
+    
+    def analyze_loop_timing(
+        self, 
+        data_update_times: List[float], 
+        prediction_times: List[float],
+        data_update_interval: float = 30.0,
+        prediction_interval: float = 2.0
+    ) -> Dict[str, Any]:
+        """
+        Analyze the timing performance of data update and prediction loops.
+        
+        Args:
+            data_update_times: List of execution times (in seconds) for data update loop iterations
+            prediction_times: List of execution times (in seconds) for prediction loop iterations
+            data_update_interval: Expected interval between data updates (in seconds)
+            prediction_interval: Expected interval between predictions (in seconds)
+            
+        Returns:
+            Dictionary with timing analysis metrics
+        """
+        results = {
+            "data_update_loop": {},
+            "prediction_loop": {},
+            "overall": {}
+        }
+        
+        # Analyze data update loop
+        if data_update_times:
+            du_times = np.array(data_update_times)
+            results["data_update_loop"] = {
+                "count": len(data_update_times),
+                "mean_time_s": float(np.mean(du_times)),
+                "median_time_s": float(np.median(du_times)),
+                "min_time_s": float(np.min(du_times)),
+                "max_time_s": float(np.max(du_times)),
+                "std_time_s": float(np.std(du_times)),
+                "total_time_s": float(np.sum(du_times)),
+                "expected_interval_s": data_update_interval,
+                "overruns": int(np.sum(du_times > data_update_interval)),
+                "overrun_percentage": float(np.mean(du_times > data_update_interval) * 100),
+                "utilization": float(np.mean(du_times) / data_update_interval * 100) if data_update_interval > 0 else 0.0,
+            }
+        
+        # Analyze prediction loop
+        if prediction_times:
+            pred_times = np.array(prediction_times)
+            results["prediction_loop"] = {
+                "count": len(prediction_times),
+                "mean_time_s": float(np.mean(pred_times)),
+                "median_time_s": float(np.median(pred_times)),
+                "min_time_s": float(np.min(pred_times)),
+                "max_time_s": float(np.max(pred_times)),
+                "std_time_s": float(np.std(pred_times)),
+                "total_time_s": float(np.sum(pred_times)),
+                "expected_interval_s": prediction_interval,
+                "overruns": int(np.sum(pred_times > prediction_interval)),
+                "overrun_percentage": float(np.mean(pred_times > prediction_interval) * 100),
+                "utilization": float(np.mean(pred_times) / prediction_interval * 100) if prediction_interval > 0 else 0.0,
+            }
+        
+        # Overall analysis
+        total_data_updates = len(data_update_times)
+        total_predictions = len(prediction_times)
+        total_time = np.sum(data_update_times) + np.sum(prediction_times)
+        
+        results["overall"] = {
+            "total_data_updates": total_data_updates,
+            "total_prediction_cycles": total_predictions,
+            "total_compute_time_s": float(total_time),
+            "mean_compute_time_per_update_s": float(np.mean(data_update_times)) if data_update_times else 0.0,
+            "mean_compute_time_per_prediction_s": float(np.mean(prediction_times)) if prediction_times else 0.0,
+            "data_update_to_prediction_ratio": float(total_data_updates / total_predictions) if total_predictions > 0 else 0.0,
+        }
+        
+        return results
+    
+    def get_loop_timing_summary(
+        self, 
+        data_update_times: List[float], 
+        prediction_times: List[float]
+    ) -> str:
+        """
+        Generate a human-readable summary of loop timing analysis.
+        
+        Args:
+            data_update_times: List of execution times for data update loop
+            prediction_times: List of execution times for prediction loop
+            
+        Returns:
+            Formatted string summary
+        """
+        analysis = self.analyze_loop_timing(data_update_times, prediction_times)
+        
+        lines = [
+            "=== Loop Timing Analysis ===",
+            "",
+            "--- Data Update Loop ---",
+            f"Iterations: {analysis['data_update_loop'].get('count', 0)}",
+            f"Mean execution time: {analysis['data_update_loop'].get('mean_time_s', 0):.4f}s",
+            f"Median execution time: {analysis['data_update_loop'].get('median_time_s', 0):.4f}s",
+            f"Min time: {analysis['data_update_loop'].get('min_time_s', 0):.4f}s",
+            f"Max time: {analysis['data_update_loop'].get('max_time_s', 0):.4f}s",
+            f"Overruns: {analysis['data_update_loop'].get('overruns', 0)} ({analysis['data_update_loop'].get('overrun_percentage', 0):.1f}%)",
+            f"Utilization: {analysis['data_update_loop'].get('utilization', 0):.1f}%",
+            "",
+            "--- Prediction Loop ---",
+            f"Iterations: {analysis['prediction_loop'].get('count', 0)}",
+            f"Mean execution time: {analysis['prediction_loop'].get('mean_time_s', 0):.4f}s",
+            f"Median execution time: {analysis['prediction_loop'].get('median_time_s', 0):.4f}s",
+            f"Min time: {analysis['prediction_loop'].get('min_time_s', 0):.4f}s",
+            f"Max time: {analysis['prediction_loop'].get('max_time_s', 0):.4f}s",
+            f"Overruns: {analysis['prediction_loop'].get('overruns', 0)} ({analysis['prediction_loop'].get('overrun_percentage', 0):.1f}%)",
+            f"Utilization: {analysis['prediction_loop'].get('utilization', 0):.1f}%",
+            "",
+            "--- Overall ---",
+            f"Total compute time: {analysis['overall'].get('total_compute_time_s', 0):.2f}s",
+            f"Data update to prediction ratio: {analysis['overall'].get('data_update_to_prediction_ratio', 0):.2f}",
+        ]
+        
+        return "\n".join(lines)
 
 
 # Create a global instance for convenience

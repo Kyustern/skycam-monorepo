@@ -133,7 +133,7 @@ class KalmanFilterService:
 
     #Update timers in seconds : 
     # Update interval for fetching new data
-    DATA_UPDATE_INTERVAL = 10.0
+    DATA_UPDATE_INTERVAL = 30.0
     
     # Prediction interval
     PREDICTION_INTERVAL = 2.0
@@ -142,8 +142,8 @@ class KalmanFilterService:
     MAX_MEASUREMENT_AGE = 60.0
     
     # Process noise tuning parameters
-    POSITION_PROCESS_NOISE = 10.0    # meters^2/s^3
-    VELOCITY_PROCESS_NOISE = 1.0     # (m/s)^2/s
+    POSITION_PROCESS_NOISE = 50.0    # meters^2/s^3
+    VELOCITY_PROCESS_NOISE = 50.0     # (m/s)^2/s
     
     # Measurement noise tuning (GPS typical accuracy)
     POSITION_MEASUREMENT_NOISE = 100.0  # meters^2
@@ -181,6 +181,10 @@ class KalmanFilterService:
         # Timing
         self._last_data_update = 0.0
         self._last_prediction = 0.0
+        
+        # Loop timing tracking for analysis
+        self._data_update_times: List[float] = []  # Execution times of data update loops
+        self._prediction_times: List[float] = []  # Execution times of prediction loops
         
         # Statistics
         self._total_predictions = 0
@@ -696,6 +700,10 @@ class KalmanFilterService:
                 updated_data_count = len(updated_data.items())
                 self._last_data_update = self._get_current_time()
                 
+                # Record loop execution time
+                loop_duration = self._last_data_update - start_time
+                self._data_update_times.append(loop_duration)
+                
                 if updated_data_count > 0:
                     kalman_logger.info(f"Updated {updated_data_count} flights at {self._last_data_update:.2f}")
 
@@ -729,6 +737,10 @@ class KalmanFilterService:
 
                 latest_preds = self.get_latest_predictions()
                 self._get_socketio().emit("prediction_data", latest_preds)
+                
+                # Record loop execution time
+                loop_duration = self._get_current_time() - start_time
+                self._prediction_times.append(loop_duration)
                     
                 # Log occasionally
                 if self._total_predictions % 10 == 0:
@@ -788,7 +800,7 @@ class KalmanFilterService:
         """Get service statistics."""
         with self._lock:
             current_time = self._get_current_time()
-            return {
+            stats = {
                 "track_count": len(self._tracks),
                 "prediction_count": len(self._latest_predictions),
                 "total_predictions": self._total_predictions,
@@ -802,6 +814,36 @@ class KalmanFilterService:
                 "data_thread_alive": self._data_update_thread is not None and self._data_update_thread.is_alive(),
                 "prediction_thread_alive": self._prediction_thread is not None and self._prediction_thread.is_alive(),
             }
+            
+            # Add loop timing data to statistics
+            if self._data_update_times:
+                stats["last_data_update_loop_time"] = self._data_update_times[-1]
+                stats["mean_data_update_loop_time"] = float(np.mean(self._data_update_times))
+            if self._prediction_times:
+                stats["last_prediction_loop_time"] = self._prediction_times[-1]
+                stats["mean_prediction_loop_time"] = float(np.mean(self._prediction_times))
+            
+            return stats
+    
+    def get_loop_timing_data(self) -> Dict[str, List[float]]:
+        """
+        Get timing data for both loop threads.
+        
+        Returns:
+            Dictionary with 'data_update_times' and 'prediction_times' lists
+            containing execution durations in seconds for each loop iteration
+        """
+        with self._lock:
+            return {
+                "data_update_times": list(self._data_update_times),
+                "prediction_times": list(self._prediction_times)
+            }
+    
+    def clear_loop_timing_data(self) -> None:
+        """Clear the stored loop timing data."""
+        with self._lock:
+            self._data_update_times.clear()
+            self._prediction_times.clear()
 
     def start(self):
         """Start the Kalman filter service threads."""

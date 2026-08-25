@@ -426,7 +426,9 @@ class CSVStorageBackend(StorageBackend):
             stats_header = [
                 'timestamp', 'frame_index', 'session_id',
                 'track_count', 'prediction_count',
-                'total_predictions', 'total_measurements'
+                'total_predictions', 'total_measurements',
+                'last_data_update_loop_time', 'mean_data_update_loop_time',
+                'last_prediction_loop_time', 'mean_prediction_loop_time'
             ]
             
             stats_path = Path(self._current_dir_path) / "statistics.csv"
@@ -486,6 +488,58 @@ class CSVStorageBackend(StorageBackend):
         except Exception as e:
             self._logger.error(f"Error writing predictions CSV: {e}")
     
+    def _parse_opensky_data(self, data: Dict[str, Any], callsign: str) -> Dict[str, Any]:
+        """
+        Parse OpenSky data and apply defaults for missing or None fields.
+        
+        Args:
+            data: Raw OpenSky data dictionary
+            callsign: Aircraft callsign for logging context
+            
+        Returns:
+            Dictionary with all fields populated and validated
+        """
+        # Define expected fields with their default values and types
+        numeric_fields = [
+            'latitude', 'longitude', 'baro_altitude',
+            'velocity', 'true_track', 'vertical_rate'
+        ]
+        boolean_fields = ['on_ground']
+        
+        parsed = {}
+        
+        # Process numeric fields
+        for field in numeric_fields:
+            value = data.get(field)
+            if value is None or value == '':
+                self._logger.warning(f"Field '{field}' missing or None for {callsign}, defaulting to 0.0")
+                print(f"WARNING: Field '{field}' missing or None for {callsign}, defaulting to 0.0")
+                parsed[field] = 0.0
+            else:
+                try:
+                    parsed[field] = float(value)
+                except (ValueError, TypeError) as e:
+                    self._logger.warning(f"Field '{field}' for {callsign} has invalid value '{value}', defaulting to 0.0")
+                    print(f"WARNING: Field '{field}' for {callsign} has invalid value '{value}', defaulting to 0.0")
+                    parsed[field] = 0.0
+        
+        # Process boolean fields
+        for field in boolean_fields:
+            value = data.get(field)
+            if value is None or value == '':
+                self._logger.warning(f"Field '{field}' missing or None for {callsign}, defaulting to True")
+                print(f"WARNING: Field '{field}' missing or None for {callsign}, defaulting to True")
+                parsed[field] = True
+            else:
+                try:
+                    parsed[field] = bool(value)
+                except (ValueError, TypeError) as e:
+                    self._logger.warning(f"Field '{field}' for {callsign} has invalid value '{value}', defaulting to True")
+                    print(f"WARNING: Field '{field}' for {callsign} has invalid value '{value}', defaulting to True")
+                    parsed[field] = True
+        
+        return parsed
+    
     def _write_opensky_csv(self, frame_data: FrameData) -> None:
         """Write OpenSky data to CSV."""
         if self._current_dir_path is None or 'opensky' not in self._csv_writers:
@@ -498,23 +552,26 @@ class CSVStorageBackend(StorageBackend):
                 return
             
             for callsign, data in flight_data.items():
+                # Parse and validate data
+                parsed_data = self._parse_opensky_data(data, callsign)
+                
                 row = {
                     'timestamp': frame_data.timestamp,
                     'frame_index': self._frame_count,
                     'session_id': self._current_session_id,
                     'callsign': callsign,
-                    'latitude': float(data.get('latitude', 0.0)),
-                    'longitude': float(data.get('longitude', 0.0)),
-                    'baro_altitude': float(data.get('baro_altitude', 0.0)),
-                    'velocity': float(data.get('velocity', 0.0)),
-                    'true_track': float(data.get('true_track', 0.0)),
-                    'vertical_rate': float(data.get('vertical_rate', 0.0)),
-                    'on_ground': bool(data.get('on_ground', True)),
+                    'latitude': parsed_data['latitude'],
+                    'longitude': parsed_data['longitude'],
+                    'baro_altitude': parsed_data['baro_altitude'],
+                    'velocity': parsed_data['velocity'],
+                    'true_track': parsed_data['true_track'],
+                    'vertical_rate': parsed_data['vertical_rate'],
+                    'on_ground': parsed_data['on_ground'],
                 }
                 
                 # Calculate velocity components
-                velocity = float(data.get('velocity', 0.0))
-                true_track = float(data.get('true_track', 0.0))
+                velocity = parsed_data['velocity']
+                true_track = parsed_data['true_track']
                 row['v_north'] = velocity * math.cos(math.radians(true_track))
                 row['v_east'] = velocity * math.sin(math.radians(true_track))
                 
@@ -539,6 +596,10 @@ class CSVStorageBackend(StorageBackend):
                 'prediction_count': int(statistics.get('prediction_count', 0)),
                 'total_predictions': int(statistics.get('total_predictions', 0)),
                 'total_measurements': int(statistics.get('total_measurements', 0)),
+                'last_data_update_loop_time': float(statistics.get('last_data_update_loop_time', 0.0)),
+                'mean_data_update_loop_time': float(statistics.get('mean_data_update_loop_time', 0.0)),
+                'last_prediction_loop_time': float(statistics.get('last_prediction_loop_time', 0.0)),
+                'mean_prediction_loop_time': float(statistics.get('mean_prediction_loop_time', 0.0)),
             }
             
             self._csv_writers['statistics'].writerow(row)

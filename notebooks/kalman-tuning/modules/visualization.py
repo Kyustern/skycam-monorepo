@@ -1216,6 +1216,131 @@ class KalmanVisualizer:
         ax.grid(True, alpha=0.3)
         
         return fig, ax
+    
+    # ========================================================================
+    # LOOP TIMING VISUALIZATION
+    # ========================================================================
+    
+    def plot_loop_timing(
+        self,
+        data_update_times: List[float],
+        prediction_times: List[float],
+        data_update_interval: float = 30.0,
+        prediction_interval: float = 2.0,
+        figsize: Optional[Tuple[int, int]] = None
+    ) -> Tuple[Figure, Axes]:
+        """
+        Plot loop timing distribution and history.
+        
+        Args:
+            data_update_times: List of execution times for data update loop
+            prediction_times: List of execution times for prediction loop
+            data_update_interval: Expected interval for data updates
+            prediction_interval: Expected interval for predictions
+            figsize: Figure size
+            
+        Returns:
+            Tuple of (figure, axes)
+        """
+        if figsize is None:
+            figsize = (14, 10)
+        
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+        
+        # Plot 1: Data update loop timing histogram
+        ax1 = axes[0, 0]
+        if data_update_times:
+            ax1.hist(data_update_times, bins=20, alpha=0.7, color='steelblue', edgecolor='black')
+            ax1.axvline(data_update_interval, color='red', linestyle='--', label=f'Target ({data_update_interval}s)')
+            ax1.set_xlabel('Execution Time (s)')
+            ax1.set_ylabel('Frequency')
+            ax1.set_title('Data Update Loop Execution Time Distribution')
+            ax1.grid(True, alpha=0.3)
+            ax1.legend()
+        
+        # Plot 2: Prediction loop timing histogram
+        ax2 = axes[0, 1]
+        if prediction_times:
+            ax2.hist(prediction_times, bins=20, alpha=0.7, color='coral', edgecolor='black')
+            ax2.axvline(prediction_interval, color='red', linestyle='--', label=f'Target ({prediction_interval}s)')
+            ax2.set_xlabel('Execution Time (s)')
+            ax2.set_ylabel('Frequency')
+            ax2.set_title('Prediction Loop Execution Time Distribution')
+            ax2.grid(True, alpha=0.3)
+            ax2.legend()
+        
+        # Plot 3: Data update loop timing over time
+        ax3 = axes[1, 0]
+        if data_update_times:
+            ax3.plot(data_update_times, marker='o', markersize=2, alpha=0.6, color='steelblue')
+            ax3.axhline(data_update_interval, color='red', linestyle='--', label=f'Target ({data_update_interval}s)')
+            ax3.set_xlabel('Iteration')
+            ax3.set_ylabel('Execution Time (s)')
+            ax3.set_title('Data Update Loop Execution Time Over Time')
+            ax3.grid(True, alpha=0.3)
+            ax3.legend()
+        
+        # Plot 4: Prediction loop timing over time
+        ax4 = axes[1, 1]
+        if prediction_times:
+            ax4.plot(prediction_times, marker='o', markersize=2, alpha=0.6, color='coral')
+            ax4.axhline(prediction_interval, color='red', linestyle='--', label=f'Target ({prediction_interval}s)')
+            ax4.set_xlabel('Iteration')
+            ax4.set_ylabel('Execution Time (s)')
+            ax4.set_title('Prediction Loop Execution Time Over Time')
+            ax4.grid(True, alpha=0.3)
+            ax4.legend()
+        
+        plt.tight_layout()
+        return fig, axes
+    
+    def plot_loop_timing_box(
+        self,
+        data_update_times: List[float],
+        prediction_times: List[float],
+        figsize: Optional[Tuple[int, int]] = None
+    ) -> Tuple[Figure, Axes]:
+        """
+        Plot box plots for loop timing comparison.
+        
+        Args:
+            data_update_times: List of execution times for data update loop
+            prediction_times: List of execution times for prediction loop
+            figsize: Figure size
+            
+        Returns:
+            Tuple of (figure, axes)
+        """
+        if figsize is None:
+            figsize = (10, 6)
+        
+        fig, ax = plt.subplots(figsize=figsize)
+        
+        data = []
+        labels = []
+        colors = []
+        
+        if data_update_times:
+            data.append(data_update_times)
+            labels.append('Data Update Loop')
+            colors.append('steelblue')
+        
+        if prediction_times:
+            data.append(prediction_times)
+            labels.append('Prediction Loop')
+            colors.append('coral')
+        
+        if data:
+            bp = ax.boxplot(data, labels=labels, patch_artist=True)
+            for patch, color in zip(bp['boxes'], colors):
+                patch.set_facecolor(color)
+                patch.set_alpha(0.6)
+            ax.set_ylabel('Execution Time (s)')
+            ax.set_title('Loop Execution Time Comparison')
+            ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        return fig, ax
 
 
 # Create a global instance for convenience
@@ -1246,3 +1371,14 @@ def plot_scatter(data: pd.DataFrame, x_col: str, y_col: str, **kwargs) -> Tuple[
 def plot_3d_trajectory_interactive(trajectory: pd.DataFrame, **kwargs) -> Any:
     """Convenience function to create interactive 3D trajectory plot."""
     return kalman_visualizer.plot_3d_trajectory_interactive(trajectory, **kwargs)
+
+
+def plot_loop_timing(
+    data_update_times: List[float],
+    prediction_times: List[float],
+    **kwargs
+) -> Tuple[Figure, Any]:
+    """Convenience function to plot loop timing analysis."""
+    return kalman_visualizer.plot_loop_timing(
+        data_update_times, prediction_times, **kwargs
+    )
