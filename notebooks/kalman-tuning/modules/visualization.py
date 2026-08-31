@@ -321,7 +321,8 @@ class KalmanVisualizer:
     
     def plot_3d_trajectory_interactive(
         self,
-        trajectory: pd.DataFrame,
+        predictions: pd.DataFrame,
+        measurements: pd.DataFrame,
         callsign: str = "Unknown",
         width: int = 900,
         height: int = 700
@@ -343,54 +344,94 @@ class KalmanVisualizer:
         """
         try:
             import plotly.graph_objects as go
-            # from plotly.subplots import make_subplots
+            import plotly.express as px
         except ImportError:
             print("Plotly not available. Install with: pip install plotly")
             return None
         
-        if len(trajectory) == 0:
+        if len(predictions) == 0:
             print(f"No data for interactive 3D trajectory: {callsign}")
             return None
         
-        # Normalize timestamps for color mapping (0 to 1)
-        t_min = trajectory['timestamp'].min()
-        t_max = trajectory['timestamp'].max()
-        normalized_time = (trajectory['timestamp'] - t_min) / (t_max - t_min) if t_max > t_min else 0
-        
-        # Create 3D scatter plot with line
+        # Create figure
         fig = go.Figure()
+
+        # Get unique timestamps from measurements (max 20 as per user)
+        measurement_timestamps = measurements['timestamp'].unique()
+        num_timestamps = len(measurement_timestamps)
         
-        # Add trajectory line
+        # Create discrete colormap for timestamps
+        # Use qualitative color maps with distinct colors for up to 20 timestamps
+        if num_timestamps <= 10:
+            colormap = px.colors.qualitative.Plotly[:num_timestamps]
+        elif num_timestamps <= 20:
+            # Use first num_timestamps from Dark24 (which has 24 colors)
+            colormap = px.colors.qualitative.Dark24[:num_timestamps]
+        else:
+            # Fallback to sequential for more than 20
+            # Sample colors from Viridis colorscale
+            import plotly.colors as pc
+            colormap = pc.sample_colorscale('Viridis', num_timestamps)
+        
+        # Create color mapping: timestamp -> color
+        timestamp_colors = {}
+        for i, ts in enumerate(measurement_timestamps):
+            timestamp_colors[ts] = colormap[i]
+        
+        # For measurements: map each point to its timestamp's color
+        measurement_colors = [timestamp_colors[ts] for ts in measurements['timestamp']]
+        
+        # Add measurements as line with colored segments
+        measurements_sorted = measurements.sort_values('timestamp')
         fig.add_trace(go.Scatter3d(
-            x=trajectory['longitude'],
-            y=trajectory['latitude'],
-            z=trajectory['baro_altitude'] / 1000,  # Convert to km
-            mode='lines',
-            line=dict(color='blue', width=3),
-            name='Trajectory'
+            x=measurements_sorted['longitude'],
+            y=measurements_sorted['latitude'],
+            z=measurements_sorted['baro_altitude'] / 1000,
+            mode='lines+markers',
+            line=dict(
+                color=measurement_colors,
+                width=4
+            ),
+            marker=dict(
+                size=4,
+                color=measurement_colors
+            ),
+            name='Measurements'
         ))
         
-        # Add points colored by time
+        # For predictions: associate each with its measurement timestamp
+        # Match predictions to measurements by timestamp (nearest match)
+        prediction_colors = []
+        for pred_ts in predictions['timestamp']:
+            # Find closest measurement timestamp
+            time_diffs = abs(measurement_timestamps - pred_ts)
+            closest_idx = time_diffs.argmin()
+            closest_ts = measurement_timestamps[closest_idx]
+            prediction_colors.append(timestamp_colors[closest_ts])
+        
+        # Add predictions as markers with matching measurement colors
         fig.add_trace(go.Scatter3d(
-            x=trajectory['longitude'],
-            y=trajectory['latitude'],
-            z=trajectory['baro_altitude'] / 1000,
+            x=predictions['longitude'],
+            y=predictions['latitude'],
+            z=predictions['baro_altitude'] / 1000,
             mode='markers',
             marker=dict(
-                size=5,
-                color=normalized_time,
-                colorscale='Viridis',
-                opacity=0.7,
-                colorbar=dict(title='Time')
+                size=6,
+                color=prediction_colors,
+                opacity=0.8,
+                line=dict(
+                    width=1,
+                    color='DarkSlateGrey'
+                )
             ),
-            name='Positions'
+            name='Predictions'
         ))
         
         # Add start marker
         fig.add_trace(go.Scatter3d(
-            x=[trajectory.iloc[0]['longitude']],
-            y=[trajectory.iloc[0]['latitude']],
-            z=[trajectory.iloc[0]['baro_altitude'] / 1000],
+            x=[predictions.iloc[0]['longitude']],
+            y=[predictions.iloc[0]['latitude']],
+            z=[predictions.iloc[0]['baro_altitude'] / 1000],
             mode='markers',
             marker=dict(
                 size=10,
@@ -402,9 +443,9 @@ class KalmanVisualizer:
         
         # Add end marker
         fig.add_trace(go.Scatter3d(
-            x=[trajectory.iloc[-1]['longitude']],
-            y=[trajectory.iloc[-1]['latitude']],
-            z=[trajectory.iloc[-1]['baro_altitude'] / 1000],
+            x=[predictions.iloc[-1]['longitude']],
+            y=[predictions.iloc[-1]['latitude']],
+            z=[predictions.iloc[-1]['baro_altitude'] / 1000],
             mode='markers',
             marker=dict(
                 size=10,
@@ -1368,9 +1409,10 @@ def plot_scatter(data: pd.DataFrame, x_col: str, y_col: str, **kwargs) -> Tuple[
     return kalman_visualizer.plot_scatter_correlation(data, x_col, y_col, **kwargs)
 
 
-def plot_3d_trajectory_interactive(trajectory: pd.DataFrame, **kwargs) -> Any:
+def plot_3d_trajectory_interactive(predictions: pd.DataFrame,
+        measurements: pd.DataFrame, **kwargs) -> Any:
     """Convenience function to create interactive 3D trajectory plot."""
-    return kalman_visualizer.plot_3d_trajectory_interactive(trajectory, **kwargs)
+    return kalman_visualizer.plot_3d_trajectory_interactive(predictions, measurements, **kwargs)
 
 
 def plot_loop_timing(

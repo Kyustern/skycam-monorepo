@@ -142,11 +142,11 @@ class KalmanFilterService:
     MAX_MEASUREMENT_AGE = 60.0
     
     # Process noise tuning parameters
-    POSITION_PROCESS_NOISE = 50.0    # meters^2/s^3
-    VELOCITY_PROCESS_NOISE = 50.0     # (m/s)^2/s
+    POSITION_PROCESS_NOISE = 100.0    # meters^2/s^3
+    VELOCITY_PROCESS_NOISE = 200.0     # (m/s)^2/s
     
     # Measurement noise tuning (GPS typical accuracy)
-    POSITION_MEASUREMENT_NOISE = 100.0  # meters^2
+    POSITION_MEASUREMENT_NOISE = 20.0  # meters^2
     
     def __init__(self, aircraft_service_ref=None):
         """
@@ -311,7 +311,7 @@ class KalmanFilterService:
         # Initialize covariance matrix (high uncertainty initially)
         # Position uncertainty: 1000m^2, Velocity uncertainty: 100 (m/s)^2
         position_var = 1000.0
-        velocity_var = 100.0
+        velocity_var = 200.0
         altitude_var = 1000.0
         vertical_velocity_var = 100.0
         
@@ -742,9 +742,8 @@ class KalmanFilterService:
                 loop_duration = self._get_current_time() - start_time
                 self._prediction_times.append(loop_duration)
                     
-                # Log occasionally
-                if self._total_predictions % 10 == 0:
-                    kalman_logger.info(f"Generated {len(predictions)} predictions at {start_time:.2f}")
+                # Log every prediction cycle
+                kalman_logger.info(f"Generated {len(predictions)} predictions at {start_time:.2f}")
                     
             except Exception as e:
                 kalman_logger.error(f"Error in prediction loop: {e}")
