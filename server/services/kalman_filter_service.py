@@ -90,7 +90,7 @@ class FlightTrack:
     Q: np.ndarray = field(default_factory=lambda: np.eye(6))
     
     # Measurement noise covariance
-    R: np.ndarray = field(default_factory=lambda: np.eye(3))
+    R: np.ndarray = field(default_factory=lambda: np.eye(6))
     
     # Prediction timestamp
     last_prediction_time: float = 0.0
@@ -108,7 +108,7 @@ class FlightTrack:
         if self.Q.size == 0:
             self.Q = np.eye(6)
         if self.R.size == 0:
-            self.R = np.eye(3)
+            self.R = np.eye(6)
         
         # Ensure state_vector is always float64 (not object dtype with None values)
         if self.state_vector.dtype == object:
@@ -147,6 +147,8 @@ class KalmanFilterService:
     
     # Measurement noise tuning (GPS typical accuracy)
     POSITION_MEASUREMENT_NOISE = 20.0  # meters^2
+    VELOCITY_MEASUREMENT_NOISE = 10.0   # (m/s)^2 for horizontal velocity
+    VERTICAL_VELOCITY_MEASUREMENT_NOISE = 5.0  # (m/s)^2 for vertical rate
     
     def __init__(self, aircraft_service_ref=None):
         """
@@ -326,11 +328,14 @@ class KalmanFilterService:
             self.VELOCITY_PROCESS_NOISE, self.VELOCITY_PROCESS_NOISE, self.VELOCITY_PROCESS_NOISE
         ])
         
-        # Measurement noise covariance (only for position measurements)
+        # Measurement noise covariance (for position and velocity measurements)
         track.R = np.diag([
             self.POSITION_MEASUREMENT_NOISE,
             self.POSITION_MEASUREMENT_NOISE,
-            self.POSITION_MEASUREMENT_NOISE
+            self.POSITION_MEASUREMENT_NOISE,
+            self.VELOCITY_MEASUREMENT_NOISE,
+            self.VELOCITY_MEASUREMENT_NOISE,
+            self.VERTICAL_VELOCITY_MEASUREMENT_NOISE
         ])
         
         return track
@@ -402,7 +407,7 @@ class KalmanFilterService:
             track.last_measurement_time = current_time
             return False
         
-        # Measurement vector: [north, east, alt] in meters relative to track's reference point
+        # === Extract position measurements ===
         lat_meas = self._get_float(flight_data.get("latitude"), 0.0)
         lon_meas = self._get_float(flight_data.get("longitude"), 0.0)
         alt_meas = self._get_float(flight_data.get("baro_altitude"), 0.0)
@@ -414,32 +419,42 @@ class KalmanFilterService:
             lon_meas - track.ref_longitude
         )
         
-        z = np.array([north_meas, east_meas, alt_meas])
+        # === Extract velocity measurements ===
+        velocity = self._get_float(flight_data.get("velocity"), 0.0)
+        true_track = self._get_float(flight_data.get("true_track"), 0.0)
+        vertical_rate = self._get_float(flight_data.get("vertical_rate"), 0.0)
         
-        # First, predict to current time
-        self._predict_track(track, current_time)
+        # Convert velocity and heading to north/east components
+        v_north_meas = velocity * math.cos(math.radians(true_track))
+        v_east_meas = velocity * math.sin(math.radians(true_track))
         
-        # State vector after prediction: [north_pred, east_pred, alt_pred, v_north, v_east, v_alt]
-        x_pred = track.state_vector.copy()
-        P_pred = track.covariance_matrix.copy()
+        # === Full measurement vector: [north, east, alt, v_north, v_east, v_alt] ===
+        z = np.array([north_meas, east_meas, alt_meas, v_north_meas, v_east_meas, vertical_rate])
         
-        # Measurement matrix H: maps state to measurement
-        # H = [1 0 0 0 0 0]  # north
-        #     [0 1 0 0 0 0]  # east
-        #     [0 0 1 0 0 0]  # alt
-        H = np.array([
-            [1, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0]
+        # === Predict track state to current time ===
+        # State transition matrix F (constant velocity model)
+        F = np.array([
+            [1, 0, 0, dt, 0,  0],
+            [0, 1, 0, 0,  dt, 0],
+            [0, 0, 1, 0,  0,  dt],
+            [0, 0, 0, 1,  0,  0],
+            [0, 0, 0, 0,  1,  0],
+            [0, 0, 0, 0,  0,  1]
         ])
         
-        # Measurement residual: y = z - H * x_pred
+        x_pred = F @ track.state_vector
+        P_pred = F @ track.covariance_matrix @ F.T + track.Q
+        
+        # === Full state measurement matrix H (6x6 identity - we measure all states) ===
+        H = np.eye(6)
+        
+        # === Measurement residual ===
         y = z - H @ x_pred
         
-        # Innovation covariance: S = H * P_pred * H^T + R
+        # === Innovation covariance ===
         S = H @ P_pred @ H.T + track.R
         
-        # Kalman gain: K = P_pred * H^T * S^-1
+        # === Kalman gain ===
         try:
             S_inv = np.linalg.inv(S)
         except np.linalg.LinAlgError:
@@ -449,14 +464,11 @@ class KalmanFilterService:
             
         K = P_pred @ H.T @ S_inv
         
-        # Update state: x = x_pred + K * y
+        # === Update state and covariance ===
         track.state_vector = x_pred + K @ y
+        track.covariance_matrix = (np.eye(6) - K @ H) @ P_pred
         
-        # Update covariance: P = (I - K * H) * P_pred
-        I = np.eye(6)
-        track.covariance_matrix = (I - K @ H) @ P_pred
-        
-        # Update track state
+        # === Update track state ===
         track.last_measurement_time = current_time
         if track.filter_state == KalmanFilterState.INITIALIZING:
             track.filter_state = KalmanFilterState.TRACKING
