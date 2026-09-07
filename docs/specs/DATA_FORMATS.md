@@ -310,19 +310,6 @@ Type: `List[Dict]` - List of prediction dictionaries
 
 ---
 
-#### `/api/turret/status`
-
-```json
-{
-  "azimuth": 0.0,
-  "elevation": 0.0,
-  "is_armed": false,
-  "battery_level": 100
-}
-```
-
----
-
 ### Serial Port
 
 #### `/api/serial/ports`

@@ -60,9 +60,10 @@ export function computeAngles(observer: PositionObject, target: PositionObject):
   // Calculate vertical angle: angle above or below horizontal plane
   const vertical = Math.asin(toTarget.clone().normalize().dot(up));
 
+  
   return {
-    signedAzimuth: azimuth,
-    verticalAngle: vertical,
+    signedAzimuth: parseFloat(THREE.MathUtils.radToDeg(azimuth).toFixed(2)),
+    verticalAngle: parseFloat(THREE.MathUtils.radToDeg(vertical).toFixed(2)),
   };
 }
 
@@ -91,7 +92,7 @@ export function computeAnglesDegrees(observer: PositionObject, target: PositionO
  * @param radians - Angle in radians
  * @returns Formatted string like "+45.0°" or "-30.5°"
  */
-export function formatAngle(radians: number): string {
+export function formatAngleDisplay(radians: number): string {
   const degrees = THREE.MathUtils.radToDeg(radians);
   return `${degrees > 0 ? '+' : ''}${degrees.toFixed(1)}°`;
 }

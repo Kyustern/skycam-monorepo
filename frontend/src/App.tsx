@@ -21,7 +21,7 @@ function App() {
     return () => {
       // Cleanup will be handled by the store's disconnect
     };
-  }, [reconnect]);
+  }, []); // Empty dependency array - reconnect is stable from Zustand
 
   // Refresh aircraft data when observer position changes
   useEffect(() => {

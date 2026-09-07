@@ -112,7 +112,7 @@ export const MainScene = ({ controlsRef }: MainSceneProps) => {
                 <GradientBackground darknessMultiplier={darkness} />
                 <ambientLight intensity={1} />
                 <pointLight position={[10, 10, 10]} />
-                    <EarthMesh>
+                <EarthMesh>
                     <EarthGrid />
                     <EarthCities />
                     <ObserverMarker />
@@ -120,7 +120,7 @@ export const MainScene = ({ controlsRef }: MainSceneProps) => {
                     <PredictionMarker />
                     <ConnectionLine />
                     <AzimuthAngleOverlay />
-                    </EarthMesh>
+                </EarthMesh>
                 <OrbitControls
                     ref={controlsRef}
                     enableDamping

@@ -36,29 +36,6 @@ GET /api/health
 
 ### Turret Control
 
-#### GET /api/turret/status
-
-Get current turret status.
-
-**Request:**
-```
-GET /api/turret/status
-```
-
-**Response:**
-```json
-{
-  "azimuth": 0,
-  "elevation": 0,
-  "is_armed": false,
-  "battery_level": 100
-}
-```
-
-**Status Code:** 200 OK
-
-**Note:** Currently returns mock data. Actual implementation pending.
-
 ---
 
 #### POST /api/turret/command

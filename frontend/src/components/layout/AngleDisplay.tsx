@@ -1,25 +1,41 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useStore } from '../../store/useStore'
-import { computeAngles, formatAngle } from '../../utilities/angleUtils'
+import { computeAngles, formatAngle, formatAngleDisplay } from '../../utilities/angleUtils'
 import { sendMovetoCommand } from '@/services/serialService'
 
 export const AngleDisplay = () => {
   const observerPosition = useStore(state => state.observerPosition)
   const selectedFlight = useStore(state => state.selectedFlight)
-
+  const socket = useStore(state => state.socket)
+  const predictions = useStore(state => state.predictions)
+  const socketReadyState = useStore(state => state.socketReadyState)
+  
   const { signedAzimuth, verticalAngle } = useMemo(() => {
-    if (!observerPosition || !selectedFlight) {
+    if (!observerPosition || !selectedFlight || !predictions[selectedFlight?.callsign]) {
       return { signedAzimuth: 0, verticalAngle: 0 }
     }
-    const angles = computeAngles(observerPosition, selectedFlight)
-    const formatedAngles = {
-      signedAzimuth: formatAngle(angles.signedAzimuth),
-      verticalAngle: formatAngle(angles.verticalAngle)
-    }
-    sendMovetoCommand({ azimuth: parseFloat(formatedAngles.signedAzimuth), elevation: parseFloat(formatedAngles.verticalAngle) })
-    return formatedAngles
-  }, [selectedFlight])
+    const target = predictions[selectedFlight.callsign] || selectedFlight
+    return computeAngles(observerPosition, target)
+  }, [observerPosition, predictions, selectedFlight?.callsign])
 
+  // Track previous values to avoid duplicate emits
+  const prevAzimuth = useRef<number>(0)
+  const prevElevation = useRef<number>(0)
+
+  useEffect(() => {
+    if (socketReadyState && socket &&
+        (signedAzimuth !== prevAzimuth.current || verticalAngle !== prevElevation.current)) {
+      socket.emit("moveto", { azimuth: signedAzimuth, elevation: verticalAngle })
+      prevAzimuth.current = signedAzimuth
+      prevElevation.current = verticalAngle
+    }
+  }, [signedAzimuth, verticalAngle, socketReadyState, socket])
+
+
+  useEffect(() => {
+    console.log('LTES - predictions', predictions);
+
+  }, [predictions])
   if (!observerPosition || !selectedFlight) return null
 
   return (

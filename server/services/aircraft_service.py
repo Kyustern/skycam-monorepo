@@ -41,6 +41,7 @@ class AircraftService:
         default_loc = self._secrets.get("DEFAULT_LOCATION", {})
         center_lat = default_loc.get("latitude", 41.6)
         center_lon = default_loc.get("longitude", 2.7)
+        search_radius = default_loc.get("search_radius", 20.0)
         half_range = 1.5 / 2  # 0.75 degrees
 
         self.DEFAULT_LAT_MIN = center_lat - half_range
@@ -52,7 +53,7 @@ class AircraftService:
         self.last_position = {
             "latitude": center_lat,
             "longitude": center_lon,
-            "radius_km": 100.0,
+            "radius_km": search_radius,
         }
     
     def _load_secrets(self) -> Dict[str, Any]:
@@ -167,6 +168,7 @@ class AircraftService:
         )
         
         response.raise_for_status()
+        aircraft_logger.info(f"Remaining calls: {response.headers.get("X-Rate-Limit-Remaining")}")
         return response.json()
     
     def get_aircraft_at_position(

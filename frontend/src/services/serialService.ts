@@ -112,14 +112,6 @@ export async function sendMovetoCommand(
   return handleFetch<ApiResponse>(response, "Failed to send moveto command");
 }
 
-export async function getSerialMovetoStatus(): Promise<ApiResponse> {
-  const response = await fetch(`${API_BASE}/serial/moveto`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  return handleFetch<ApiResponse>(response, "Failed to check serial moveto status");
-}
-
 // Turret Endpoints
 
 export async function getTurretStatus(): Promise<TurretStatus> {

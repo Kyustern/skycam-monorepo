@@ -23,23 +23,21 @@
 #define FAN 4
 
 #define BUTTON 20
-
 // 84/18 teeth
 const float gear_ratio = 4.666666667;
 const float yaw_degs_per_steps = 1.8;
 const float pitch_degs_per_steps = 1.8;
-
 //We substract 30 degrees to avoid hitting the limit switch
 float SAFETY_RANGE_MULTIPLIER = (360-30) / 360.0f;
-float yaw_full_range = ((360 / 1.8) * 16 * gear_ratio);
-float yaw_safe_range = yaw_full_range * SAFETY_RANGE_MULTIPLIER;
+float yaw_abs_max = ((180 / 1.8) * 16 * gear_ratio);
+float yaw_safe_range = yaw_abs_max * SAFETY_RANGE_MULTIPLIER;
 int yaw_dir = -1;
-float pitch_full_range = ((360 / 1.8) * 16 * gear_ratio);
-float pitch_safe_range = pitch_full_range * SAFETY_RANGE_MULTIPLIER;
+float pitch_abs_max = ((180 / 1.8) * 16 * gear_ratio);
+float pitch_safe_range = pitch_abs_max * SAFETY_RANGE_MULTIPLIER;
 int pitch_dir = 1;
 
-float steps_safety_offset = (1.0f - SAFETY_RANGE_MULTIPLIER) * yaw_full_range;
-float middle = yaw_full_range / 2.0f;
+float steps_safety_offset = (1.0f - SAFETY_RANGE_MULTIPLIER) * yaw_abs_max;
+float middle = yaw_abs_max / 2.0f;
 
 AccelStepper YAW_STEPPER(AccelStepper::DRIVER, YAW_STEP_PIN, YAW_DIR_PIN);
 AccelStepper PITCH_STEPPER(AccelStepper::DRIVER, PITCH_STEP_PIN, PITCH_DIR_PIN);
@@ -77,11 +75,20 @@ unsigned long lastLedToggle = 0;
 bool ledState = LOW;
 
 int getSafePosition(int target) {
-  int abs_target = abs(target);
-  int lower_thresh = steps_safety_offset / 2.0f;
-  int upper_thresh = yaw_full_range - (steps_safety_offset / 2.0f);
+  int direction = target > 0 ? 1 : -1;
+  int abs_target = target;
+  int lower_thresh = (steps_safety_offset / 2.0f) * direction;
+  int upper_thresh = yaw_abs_max - ((steps_safety_offset / 2.0f) * direction);
 
-  return max(lower_thresh, min(upper_thresh, abs_target));
+  if (target > 0)
+  {
+    return min(target, yaw_abs_max - (steps_safety_offset / 2.0f));
+  } else {
+    return max(target, (steps_safety_offset / 2.0f) + yaw_abs_max);
+  }
+  
+
+  // return max(lower_thresh, min(upper_thresh, abs_target));
 }
 
 int degreesToStep(int axis_full_steps, float target_degrees) {
@@ -134,13 +141,20 @@ void homeMotor(AccelStepper& stepper, int limitSwitchPin, const char* motorName,
     Serial.println("...");
 
     // Move towards the limit switch until it reads HIGH
-    stepper.move(yaw_full_range * (direction > 0 ? -1 : 1));
+    stepper.move(yaw_abs_max * (direction > 0 ? -1 : 1));
     while (digitalRead(limitSwitchPin) != HIGH)
     {
         stepper.run();
     }
-    stepper.setCurrentPosition(0);
-    stepper.moveTo((steps_safety_offset / 2) * direction);
+
+    
+    stepper.setCurrentPosition(direction * yaw_abs_max);
+    stepper.stop();
+    int s = (steps_safety_offset / 2) * direction;
+    Serial.print("steps_safety_offset : "); Serial.println(steps_safety_offset);
+    Serial.print("stepper.currentPosition : "); Serial.println(stepper.currentPosition());
+    Serial.print("s : "); Serial.println(s);
+    stepper.move(s);
     stepper.runToPosition();
     
     stepper.stop();
@@ -155,16 +169,29 @@ void moveToPosition(float yawAngle, float pitchAngle) {
     setMotorsEn(MotorsEnableState::MOT_ENABLED);
     operationState = OperationState::OP_MOVING;
 
+    //Map test
+    int safe = yaw_abs_max - steps_safety_offset;
+    Serial.print("safe : "); Serial.println(safe);
+    int yawMapped = map(yawAngle, -180, 180, -safe, safe);
+    int pitchMapped = map(pitchAngle, -180, 180, -safe, safe);
+    Serial.print("yawMapped : "); Serial.println(yawMapped);
+    YAW_STEPPER.moveTo(yawMapped);
+    PITCH_STEPPER.moveTo(pitchMapped);
     // Convert degrees to steps
     // 0-360 degrees maps to 0-axis_full_range steps
-    float yawOffset = yaw_full_range * (15.0f/360.0f);
-    const int pitchOffset = abs(middle - 7819);
-    int yawSteps = static_cast<int>((yawAngle / 360.0) * yaw_full_range);
-    int pitchSteps = static_cast<int>((pitchAngle / 360.0) * pitch_full_range);
+    // float yawOffset = yaw_abs_max * ((15.0f/360.0f));
+    // const int pitchOffset = abs(middle - 7819);
+    // int yawSteps = static_cast<int>((yawAngle / 360.0) * yaw_abs_max);
+    // int pitchSteps = static_cast<int>((pitchAngle / 360.0) * pitch_abs_max);
 
-    // Apply safety limits and move
-    YAW_STEPPER.moveTo(getSafePosition(yawSteps + yawOffset) * yaw_dir);
-    PITCH_STEPPER.moveTo(getSafePosition(pitchSteps + pitchOffset) * pitch_dir);
+    // // Apply safety limits and move
+    // int safe_yaw = getSafePosition(yawSteps + yawOffset) * yaw_dir;
+    // Serial.print("safe_yaw : "); Serial.println(safe_yaw);
+    // YAW_STEPPER.moveTo(safe_yaw);
+    // int safe_pitch = getSafePosition(pitchSteps + pitchOffset) * pitch_dir;
+    // Serial.print("safe_pitch : "); Serial.println(safe_pitch);
+    // PITCH_STEPPER.moveTo(safe_pitch);
+    // PITCH_STEPPER.moveTo(getSafePosition(pitchSteps + pitchOffset) * pitch_dir);
 }
 
 void setup()
@@ -199,7 +226,7 @@ void setup()
 
     Serial.println("All motors homed, entering operation status");
 
-    moveToPosition(180.0, 180.0);
+    moveToPosition(0.0, 0.0);
 
 }
 

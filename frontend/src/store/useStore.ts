@@ -3,7 +3,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { focusCameraOnGPS } from '@/utilities/cameraUtils'
 import { Flights } from '@/types/flightData';
 import { io, Socket } from 'socket.io-client';
-import type { SocketIOReadyState } from '@/types/flightData';
+import type { FlightState, Predictions, SocketIOReadyState } from '@/types/flightData';
 import { fetchNewFlights, type FetchNewFlightsParams } from '@/api/fetchNewFlights';
 
 // Socket.IO endpoint - use relative path for Vite proxy
@@ -45,10 +45,10 @@ type StoreState = {
   searchRadius: number
   setSearchRadius: (radius: number) => void
   flights: Flights
-  predictions: Flights
+  predictions: Predictions
   flightsHash: string
   setFlights: (flights: Flights) => void
-  setPredictions: (flights: Flights) => void
+  setPredictions: (predictions: Predictions) => void
   selectedFlight: import('@/types/flightData').FlightState | null
   setSelectedFlight: (flight: import('@/types/flightData').FlightState) => void
   selectionMode: 'airplane' | 'satellite' | 'spatial' | null
@@ -137,10 +137,15 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   reconnect: () => {
-    const { socket } = get();
+    const { socket, socketReadyState } = get();
     
-    // If already connected, do nothing
-    if (socket && socket.connected) {
+    // If already connected, connecting, or disconnected, do nothing
+    if (socket && (socket.connected || socket.connecting)) {
+      return;
+    }
+    
+    // If we're already in the process of connecting, don't create another socket
+    if (socketReadyState === 'connecting') {
       return;
     }
 
@@ -160,9 +165,12 @@ export const useStore = create<StoreState>((set, get) => ({
         timeout: 20000
       });
 
+      // Store the socket reference immediately so we can detect it in subsequent reconnect calls
+      set({ socket: newSocket });
+
       newSocket.on("connect", () => {
         console.log('Socket.IO connected at', Date.now());
-        set({ socketReadyState: 'connected', socket: newSocket });
+        set({ socketReadyState: 'connected' });
       });
 
       newSocket.on("disconnect", () => {
@@ -188,9 +196,23 @@ export const useStore = create<StoreState>((set, get) => ({
 
       newSocket.on("prediction_data", (data: unknown) => {
         try {
-          const predictionData = data as unknown as Flights;
-          console.log('LTES - predictionData', predictionData);
-          get().setPredictions(predictionData);
+          const predictionData = data as unknown as FlightState[];
+
+          const predictions : Predictions = Object.fromEntries(
+            predictionData.map(fs => [
+              fs.callsign.trim().toLocaleUpperCase(),
+              {
+                callsign: fs.callsign,
+                latitude: fs.latitude,
+                longitude: fs.longitude,
+                baro_altitude: fs.baro_altitude
+              }
+            ])
+          );
+
+          set({
+            predictions
+          })
         } catch (err) {
           console.error("Error parsing prediction_data message:", err);
           set({ wsError: "Failed to parse prediction data" });

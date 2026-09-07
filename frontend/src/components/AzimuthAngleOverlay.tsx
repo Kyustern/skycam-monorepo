@@ -10,11 +10,13 @@ const SEGMENTS = 48
 export const AzimuthAngleOverlay = () => {
   const observerPosition = useStore(state => state.observerPosition)
   const selectedFlight = useStore(state => state.selectedFlight)
+  const predictions = useStore(state => state.predictions)
   // const flightsHash = useStore(state => state.flightsHash)
   const flights = useStore(state => state.flights)
   
+  const quoteunquotePredictionsHash = JSON.stringify(predictions)
+
   const overlay = useMemo(() => {
-    // console.log('LTES - flightsHash', flightsHash);
     if (!observerPosition || !selectedFlight) return null
     const currentSelectedFlight = flights[selectedFlight.callsign.trim().toLocaleUpperCase()]
     if (!currentSelectedFlight) return null
@@ -24,16 +26,28 @@ export const AzimuthAngleOverlay = () => {
       observerPosition.longitude,
       observerPosition.baro_altitude
     )
-    const flightPoint = gpsToScenePosition(
-      currentSelectedFlight.latitude,
-      currentSelectedFlight.longitude,
-      currentSelectedFlight.baro_altitude
-    )
+
+    let flightPosition
+    
+    if (predictions[currentSelectedFlight.callsign.trim().toLocaleUpperCase()]) {
+      const pred = predictions[currentSelectedFlight.callsign.trim().toLocaleUpperCase()]
+      flightPosition = gpsToScenePosition(
+        pred.latitude,
+        pred.longitude,
+        pred.baro_altitude
+      )
+    } else {
+      flightPosition = gpsToScenePosition(
+        currentSelectedFlight.latitude,
+        currentSelectedFlight.longitude,
+        currentSelectedFlight.baro_altitude
+      )
+    }
 
     const up = observerPoint.clone().normalize()
     const north = NORTH_POLE.clone().sub(up.clone().multiplyScalar(NORTH_POLE.dot(up))).normalize()
     const east = new THREE.Vector3().crossVectors(north, up).normalize()
-    const toFlight = flightPoint.clone().sub(observerPoint)
+    const toFlight = flightPosition.clone().sub(observerPoint)
 
     const horizontalFlightDirection = toFlight.clone().sub(up.clone().multiplyScalar(toFlight.dot(up))).normalize()
 
@@ -122,7 +136,7 @@ export const AzimuthAngleOverlay = () => {
       verticalSectorGeometry,
       actualFlightRayGeometry,
     }
-  }, [observerPosition, selectedFlight, flights])
+  }, [observerPosition, selectedFlight, flights, quoteunquotePredictionsHash])
 
   if (!overlay) return null
 

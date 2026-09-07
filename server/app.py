@@ -210,7 +210,6 @@ def stop_heartbeat():
 # WebSocket event handlers
 @socketio.on('connect')
 def handle_connect():
-    """Handle new WebSocket connection."""
     with heartbeat_lock:
         connected_clients.add(request.sid)
     websocket_logger.info(f"Client connected: {request.sid} (Total: {len(connected_clients)})")
@@ -219,29 +218,25 @@ def handle_connect():
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    """Handle WebSocket disconnection."""
     with heartbeat_lock:
         connected_clients.discard(request.sid)
     websocket_logger.info(f"Client disconnected: {request.sid} (Total: {len(connected_clients)})")
+
+
+@socketio.on('moveto')
+def handle_moveto(data):
+    global server_start
+    server_logger.debug(f"Received a moveto command at {time.time() - server_start}")
+    moveto_cmd = f"moveto {data['azimuth']} {data['elevation']}"
+    success = send_serial_command(moveto_cmd)
+    if success:
+        server_logger.debug(f"Sending moveto command: {moveto_cmd}")
 
 
 # Basic health check endpoint
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "ok", "message": "Turret server is running"}), 200
-
-
-# Endpoint to get turret status
-@app.route('/api/turret/status', methods=['GET'])
-def get_status():
-    # TODO: Implement actual turret status retrieval
-    return jsonify({
-        "azimuth": 0,
-        "elevation": 0,
-        "is_armed": False,
-        "battery_level": 100
-    }), 200
-
 
 # Endpoint to send turret commands
 @app.route('/api/turret/command', methods=['POST'])
@@ -573,9 +568,10 @@ if __name__ == '__main__':
     # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+
+    server_start = time.time()
     
     # Initialize serial connection
-    
     ports = list_serial_ports()
     server_logger.info(f"Available serial ports: {ports}")
     init_serial()

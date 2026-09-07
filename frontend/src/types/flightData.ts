@@ -21,6 +21,7 @@ export type FlightState = {
 };
 
 export type Flights = Record<string, FlightState>;
+export type Predictions = Record<string, Pick<FlightState, "latitude" | "longitude" | "baro_altitude" |"callsign">>;
 
 // Raw state from ADS-B response
 export type RawState = (string | number | boolean | number[])[];
