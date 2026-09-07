@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Script to fetch and update the public folder from Google Drive
+
+set -e  # Exit on any error
+
+PUBLIC_DIR="/home/leon/DEV/DOCKER/TURRET/frontend/public"
+DRIVE_URL="https://drive.google.com/drive/folders/13mYryNJleOW7CN0h-2rXiLhuRIScmWYV?usp=sharing"
+TEMP_DIR="/tmp/public_v2_temp"
+
+# Check if gdown is available
+if ! command -v gdown &> /dev/null; then
+    echo "Error: gdown is not installed. Please install it with: pip install gdown"
+    exit 1
+fi
+
+echo "Downloading folder from Google Drive..."
+
+# Download and extract the folder using gdown
+# gdown with a folder URL automatically downloads and extracts all contents
+rm -rf "$TEMP_DIR"
+mkdir -p "$TEMP_DIR"
+
+gdown "$DRIVE_URL" -O "$TEMP_DIR"
+
+echo "Download and extraction complete."
+
+# Check if files were extracted directly into TEMP_DIR
+if [ "$(ls -A "$TEMP_DIR")" ]; then
+    # Files exist directly in TEMP_DIR
+    EXTRACTED_FOLDER="$TEMP_DIR"
+else
+    # Try to find a subdirectory
+    EXTRACTED_FOLDER=$(find "$TEMP_DIR" -maxdepth 1 -type d | grep -v "^$TEMP_DIR$" | head -1)
+    if [ -z "$EXTRACTED_FOLDER" ]; then
+        echo "Error: No folder found after extraction"
+        exit 1
+    fi
+fi
+
+echo "Extracted folder: $EXTRACTED_FOLDER"
+
+# Remove old public folder contents
+rm -rf "$PUBLIC_DIR"/*
+
+# Copy new contents
+cp -r "$EXTRACTED_FOLDER"/* "$PUBLIC_DIR/"
+
+echo "Successfully updated public folder with new version"
+
+# Cleanup
+rm -rf "$TEMP_DIR"
+
+echo "Cleanup complete"
