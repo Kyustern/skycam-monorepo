@@ -16,6 +16,7 @@ export const AngleDisplay = () => {
     }
     const target = predictions[selectedFlight.callsign] || selectedFlight
     return computeAngles(observerPosition, target)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [observerPosition, predictions, selectedFlight?.callsign])
 
   // Track previous values to avoid duplicate emits
@@ -31,11 +32,6 @@ export const AngleDisplay = () => {
     }
   }, [signedAzimuth, verticalAngle, socketReadyState, socket])
 
-
-  useEffect(() => {
-    console.log('LTES - predictions', predictions);
-
-  }, [predictions])
   if (!observerPosition || !selectedFlight) return null
 
   return (

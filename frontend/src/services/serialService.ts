@@ -97,21 +97,6 @@ export async function connectSerial(): Promise<SerialPortInfo> {
   return handleFetch<SerialPortInfo>(response, "Failed to connect serial");
 }
 
-export async function sendMovetoCommand(
-  params: MovetoCommandParams
-): Promise<ApiResponse> {
-  const roundedParams = {
-    azimuth: parseFloat(params.azimuth.toFixed(2)),
-    elevation: parseFloat(params.elevation.toFixed(2)),
-  };
-  const response = await fetch(`${API_BASE}/serial/moveto`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: roundedParams }),
-  });
-  return handleFetch<ApiResponse>(response, "Failed to send moveto command");
-}
-
 // Turret Endpoints
 
 export async function getTurretStatus(): Promise<TurretStatus> {
