@@ -50,7 +50,7 @@ def init_serial():
     # Clean up any existing connection first
     cleanup_serial()
     
-    serial_port = os.environ.get('SERIAL_PORT', '/dev/ttyUSB0')
+    serial_port = os.environ.get('SERIAL_PORT', '/dev/ttyUSB1')
     serial_rate = os.environ.get('SERIAL_RATE', '9600')
     
     try:

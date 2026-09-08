@@ -27,17 +27,32 @@
 const float gear_ratio = 4.666666667;
 const float yaw_degs_per_steps = 1.8;
 const float pitch_degs_per_steps = 1.8;
-//We substract 30 degrees to avoid hitting the limit switch
-float SAFETY_RANGE_MULTIPLIER = (360-30) / 360.0f;
-float yaw_abs_max = ((180 / 1.8) * 16 * gear_ratio);
-float yaw_safe_range = yaw_abs_max * SAFETY_RANGE_MULTIPLIER;
-int yaw_dir = -1;
-float pitch_abs_max = ((180 / 1.8) * 16 * gear_ratio);
-float pitch_safe_range = pitch_abs_max * SAFETY_RANGE_MULTIPLIER;
-int pitch_dir = 1;
+//We subtract 15 degrees from each end (30 degrees total) to avoid hitting the limit switch
+const float SAFETY_DEGREES = 15.0f; // Safety margin from each end
+const float TOTAL_SAFETY_DEGREES = 30.0f; // Total safety margin
 
-float steps_safety_offset = (1.0f - SAFETY_RANGE_MULTIPLIER) * yaw_abs_max;
-float middle = yaw_abs_max / 2.0f;
+float yaw_abs_max = ((360 / 1.8) * 16 * gear_ratio);
+float pitch_abs_max = ((360 / 1.8) * 16 * gear_ratio);
+
+// Calculate steps for safety margin (15 degrees on each end)
+// Steps per degree: yaw_abs_max / 360.0f
+float steps_per_degree = yaw_abs_max / 360.0f;
+float steps_safety_offset = SAFETY_DEGREES * steps_per_degree; // Steps for 15 degrees
+
+// For bipolar range: -yaw_abs_max/2 to +yaw_abs_max/2
+float yaw_max_positive = yaw_abs_max / 2.0f;
+float yaw_max_negative = -yaw_abs_max / 2.0f;
+float pitch_max_positive = pitch_abs_max / 2.0f;
+float pitch_max_negative = -pitch_abs_max / 2.0f;
+
+// Safe range limits for bipolar setup
+float yaw_safe_max = yaw_max_positive - steps_safety_offset;
+float yaw_safe_min = yaw_max_negative + steps_safety_offset;
+float pitch_safe_max = pitch_max_positive - steps_safety_offset;
+float pitch_safe_min = pitch_max_negative + steps_safety_offset;
+
+int yaw_dir = -1;
+int pitch_dir = 1;
 
 AccelStepper YAW_STEPPER(AccelStepper::DRIVER, YAW_STEP_PIN, YAW_DIR_PIN);
 AccelStepper PITCH_STEPPER(AccelStepper::DRIVER, PITCH_STEP_PIN, PITCH_DIR_PIN);
@@ -74,27 +89,21 @@ HomingState homingState = IDLE;
 unsigned long lastLedToggle = 0;
 bool ledState = LOW;
 
-int getSafePosition(int target) {
-  int direction = target > 0 ? 1 : -1;
-  int abs_target = target;
-  int lower_thresh = (steps_safety_offset / 2.0f) * direction;
-  int upper_thresh = yaw_abs_max - ((steps_safety_offset / 2.0f) * direction);
-
-  if (target > 0)
-  {
-    return min(target, yaw_abs_max - (steps_safety_offset / 2.0f));
-  } else {
-    return max(target, (steps_safety_offset / 2.0f) + yaw_abs_max);
+// Clamp target position to safe bipolar range
+float getSafePosition(float target, float safe_min, float safe_max) {
+  // For bipolar range: clamp between safe_min and safe_max
+  if (target > safe_max) {
+    return safe_max;
+  } else if (target < safe_min) {
+    return safe_min;
   }
-  
-
-  // return max(lower_thresh, min(upper_thresh, abs_target));
+  return target;
 }
 
-int degreesToStep(int axis_full_steps, float target_degrees) {
-    // int steps_target = map(0, 360, 0, yaw_full_range, target_degrees);
-    int safe_stesps_target = getSafePosition(target_degrees);
-    return safe_stesps_target;
+// Convert degrees to steps for bipolar range
+float degreesToSteps(float target_degrees, float axis_max_steps) {
+    // Map from -180 to +180 degrees to -axis_max_steps/2 to +axis_max_steps/2
+    return (target_degrees / 360.0f) * axis_max_steps;
 }
 
 void setMotorsEn(MotorsEnableState desiredState)
@@ -130,8 +139,7 @@ void setMotorsEn(MotorsEnableState desiredState)
 //   }
 // }
 
-void homeMotor(AccelStepper& stepper, int limitSwitchPin, const char* motorName, int direction)
-{
+void homeMotor(AccelStepper& stepper, int limitSwitchPin, const char* motorName, int direction, float axis_max_steps) {
     stepper.setMaxSpeed(M_SPEED);
     stepper.setAcceleration(M_ACCEL);
     stepper.setSpeed(M_SPEED);
@@ -140,21 +148,35 @@ void homeMotor(AccelStepper& stepper, int limitSwitchPin, const char* motorName,
     Serial.print(motorName);
     Serial.println("...");
 
+    // Determine which physical limit we're homing to
+    // For bipolar range: 
+    // - axis_max_steps/2 represents one physical end
+    // - -axis_max_steps/2 represents the other physical end
+    // We move in the direction that will hit the limit switch
+    
+    float limit_position = (direction > 0) ? -axis_max_steps / 2.0f : axis_max_steps / 2.0f;
+    
     // Move towards the limit switch until it reads HIGH
-    stepper.move(yaw_abs_max * (direction > 0 ? -1 : 1));
+    // Use a large move to ensure we hit the limit from any starting position
+    stepper.move(limit_position * 2);
     while (digitalRead(limitSwitchPin) != HIGH)
     {
         stepper.run();
     }
 
-    
-    stepper.setCurrentPosition(direction * yaw_abs_max);
+    // Set current position to the physical limit we just hit
+    stepper.setCurrentPosition(limit_position);
     stepper.stop();
-    int s = (steps_safety_offset / 2) * direction;
+    
+    // Move back from the limit by safety offset to avoid hitting it during normal operation
+    // For direction = -1 (YAW): move from +limit towards center by safety offset
+    // For direction = +1 (PITCH): move from -limit towards center by safety offset
+    float safe_position = limit_position + (steps_safety_offset * direction);
+    
     Serial.print("steps_safety_offset : "); Serial.println(steps_safety_offset);
     Serial.print("stepper.currentPosition : "); Serial.println(stepper.currentPosition());
-    Serial.print("s : "); Serial.println(s);
-    stepper.move(s);
+    Serial.print("safe_position : "); Serial.println(safe_position);
+    stepper.moveTo(safe_position);
     stepper.runToPosition();
     
     stepper.stop();
@@ -169,33 +191,29 @@ void moveToPosition(float yawAngle, float pitchAngle) {
     setMotorsEn(MotorsEnableState::MOT_ENABLED);
     operationState = OperationState::OP_MOVING;
 
-    //Map test
-    int safe = yaw_abs_max - steps_safety_offset;
-    Serial.print("safe : "); Serial.println(safe);
-    int yawMapped = map(yawAngle, -180, 180, -safe, safe);
-    int pitchMapped = map(pitchAngle, -180, 180, -safe, safe);
-    Serial.print("yawMapped : "); Serial.println(yawMapped);
-    YAW_STEPPER.moveTo(yawMapped);
-    PITCH_STEPPER.moveTo(pitchMapped);
-    // Convert degrees to steps
-    // 0-360 degrees maps to 0-axis_full_range steps
-    // float yawOffset = yaw_abs_max * ((15.0f/360.0f));
-    // const int pitchOffset = abs(middle - 7819);
-    // int yawSteps = static_cast<int>((yawAngle / 360.0) * yaw_abs_max);
-    // int pitchSteps = static_cast<int>((pitchAngle / 360.0) * pitch_abs_max);
-
-    // // Apply safety limits and move
-    // int safe_yaw = getSafePosition(yawSteps + yawOffset) * yaw_dir;
-    // Serial.print("safe_yaw : "); Serial.println(safe_yaw);
-    // YAW_STEPPER.moveTo(safe_yaw);
-    // int safe_pitch = getSafePosition(pitchSteps + pitchOffset) * pitch_dir;
-    // Serial.print("safe_pitch : "); Serial.println(safe_pitch);
-    // PITCH_STEPPER.moveTo(safe_pitch);
-    // PITCH_STEPPER.moveTo(getSafePosition(pitchSteps + pitchOffset) * pitch_dir);
+    // Convert angles to steps using bipolar range
+    // Map from -180 to +180 degrees to -yaw_abs_max/2 to +yaw_abs_max/2
+    float yawSteps = degreesToSteps(yawAngle, yaw_abs_max);
+    Serial.print("yawSteps : "); Serial.println(yawSteps);
+    // float pitchSteps = degreesToSteps(pitchAngle, pitch_abs_max) - 7819;
+    float pitchSteps = degreesToSteps(pitchAngle, pitch_abs_max);
+    Serial.print("pitchSteps : "); Serial.println(pitchSteps);
+    
+    // Apply safety limits for each axis
+    float safeYawSteps = getSafePosition(yawSteps, yaw_safe_min, yaw_safe_max);
+    float safePitchSteps = getSafePosition(pitchSteps, pitch_safe_min, pitch_safe_max);
+    
+    // Apply direction multipliers
+    YAW_STEPPER.moveTo(safeYawSteps * yaw_dir);
+    PITCH_STEPPER.moveTo(safePitchSteps * -1);
 }
 
 void setup()
 {
+
+    Serial.print("yaw_abs_max : "); Serial.println(yaw_abs_max);
+
+
     // Initialize LED first for status indication
     pinMode(_LED_BUILTIN_, OUTPUT);
     
@@ -218,15 +236,16 @@ void setup()
 
     setMotorsEn(MOT_ENABLED);
 
-    homeMotor(YAW_STEPPER, YAW_LIMIT_PIN, "YAW", yaw_dir);
-    homeMotor(PITCH_STEPPER, PITCH_LIMIT_PIN, "PITCH", pitch_dir);
+    homeMotor(YAW_STEPPER, YAW_LIMIT_PIN, "YAW", yaw_dir, yaw_abs_max);
+    homeMotor(PITCH_STEPPER, PITCH_LIMIT_PIN, "PITCH", pitch_dir, pitch_abs_max);
     
     STEPPERS.addStepper(YAW_STEPPER);
     STEPPERS.addStepper(PITCH_STEPPER);
 
     Serial.println("All motors homed, entering operation status");
 
-    moveToPosition(0.0, 0.0);
+    // moveToPosition(0.0, 0.0);q
+    moveToPosition(180.0, 180.0);
 
 }
 
