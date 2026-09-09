@@ -47,11 +47,20 @@ def init_serial():
     """Initialize serial connection to /dev/ttyUSB0."""
     global serial_connection, reader_thread
     
-    # Clean up any existing connection first
-    cleanup_serial()
-    
     serial_port = os.environ.get('SERIAL_PORT', '/dev/ttyUSB0')
     serial_rate = os.environ.get('SERIAL_RATE', '9600')
+    
+    # Close existing connection if open
+    if serial_connection and serial_connection.is_open:
+        try:
+            serial_connection.close()
+            serial_logger.info("Closed existing serial connection")
+        except Exception as e:
+            serial_logger.error(f"Error closing existing serial port: {e}")
+        serial_connection = None
+    
+    # Clear shutdown flag for new connection
+    shutdown_flag.clear()
     
     try:
         serial_connection = serial.Serial(
@@ -61,7 +70,6 @@ def init_serial():
         )
         serial_logger.info(f"Connected to {serial_port} at {serial_rate} baud")
         
-        shutdown_flag.clear()
         reader_thread = threading.Thread(target=read_serial, daemon=True)  # Make daemon
         reader_thread.start()
         return True
@@ -93,10 +101,7 @@ def read_serial():
             except:
                 pass
             serial_connection = None
-            # Try to reconnect only if not shutting down
-            if not shutdown_flag.is_set():
-                time.sleep(5)
-                init_serial()
+            serial_logger.warning("Serial connection lost. A new command will trigger reconnection.")
             break
         except Exception as e:
             serial_logger.error(f"Unexpected error: {e}")
@@ -107,6 +112,13 @@ def send_serial_command(command_str):
     """Send a command string to the serial port."""
     global serial_connection
     serial_logger.debug(f"Sending command, connection: {serial_connection}")
+    
+    # Attempt to reconnect if connection is down
+    if serial_connection is None or not serial_connection.is_open:
+        serial_logger.info("No active serial connection, attempting to reconnect...")
+        init_serial()
+        time.sleep(0.1)  # Small delay to allow connection to establish
+    
     if serial_connection and serial_connection.is_open:
         try:
             serial_logger.debug(f"Command to send: {command_str}")
@@ -115,9 +127,15 @@ def send_serial_command(command_str):
             return True
         except Exception as e:
             serial_logger.error(f"Error sending command: {e}")
+            # Mark connection as bad so next attempt will reconnect
+            try:
+                serial_connection.close()
+            except:
+                pass
+            serial_connection = None
             return False
     else:
-        serial_logger.error("Serial port not connected")
+        serial_logger.error("Serial port not connected after reconnection attempt")
         return False
 
 
@@ -140,7 +158,8 @@ def cleanup_serial():
             serial_connection = None
     
     # Wait for the reader thread to finish (with timeout)
-    if reader_thread and reader_thread.is_alive():
+    # But don't try to join if we're the reader thread ourselves (avoid deadlock)
+    if reader_thread and reader_thread.is_alive() and reader_thread is not threading.current_thread():
         reader_thread.join(timeout=2.0)
         if reader_thread.is_alive():
             serial_logger.warning("Reader thread did not stop gracefully")
