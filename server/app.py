@@ -50,7 +50,7 @@ def init_serial():
     # Clean up any existing connection first
     cleanup_serial()
     
-    serial_port = os.environ.get('SERIAL_PORT', '/dev/ttyUSB1')
+    serial_port = os.environ.get('SERIAL_PORT', '/dev/ttyUSB0')
     serial_rate = os.environ.get('SERIAL_RATE', '9600')
     
     try:
@@ -227,10 +227,8 @@ def handle_disconnect():
 def handle_moveto(data):
     global server_start
     server_logger.debug(f"Received a moveto command at {time.time() - server_start}")
-    moveto_cmd = f"moveto {data['azimuth']} {data['elevation']}"
+    moveto_cmd = f"moveto {float(data['azimuth']):.2f} {float(data['elevation']):.2f}"
     success = send_serial_command(moveto_cmd)
-    if success:
-        server_logger.debug(f"Sending moveto command: {moveto_cmd}")
 
 
 # Basic health check endpoint
@@ -263,8 +261,8 @@ def send_command():
             "error": f"azimuth and elevation must be valid numbers: {e}"
         }), 400
     
-    # Format the command string
-    command_str = "moveto 60.0 50.0"
+    # Format the command string with 2 decimal precision
+    command_str = f"moveto {azimuth:.2f} {elevation:.2f}"
     
     # Send via serial
     success = send_serial_command(command_str)
@@ -304,26 +302,6 @@ def connect_serial():
         "default": os.environ.get('SERIAL_PORT', '/dev/ttyUSB0'),
         "connected": serial_connection is not None and serial_connection.is_open
     }), 200
-
-# Endpoint for serial communication with firmware
-@app.route('/api/serial/moveto', methods=['GET', 'POST'])
-def send_serial():
-    if request.method == 'POST':
-        data = request.get_json()
-        message = data.get('message', {}) if data else {}
-        
-        if message and 'azimuth' in message and 'elevation' in message:
-            moveto_cmd = f"moveto {message['azimuth']} {message['elevation']}"
-            server_logger.debug(f"Sending moveto command: {moveto_cmd}")
-            success = send_serial_command(moveto_cmd)
-            if success:
-                return jsonify({"status": "sent to serial", "message": message}), 200
-            else:
-                return jsonify({"status": "error", "error": "Serial port not connected"}), 500
-        else:
-            return jsonify({"status": "error", "error": "No message provided"}), 400
-    else:
-        return jsonify({"status": "ready", "message": "POST to this endpoint to send serial data"}), 200
 
 
 @app.route('/api/aircraft/position', methods=['POST'])

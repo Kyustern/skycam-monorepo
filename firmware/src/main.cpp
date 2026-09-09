@@ -111,11 +111,9 @@ void setMotorsEn(MotorsEnableState desiredState)
     switch (desiredState)
     {
     case MOT_ENABLED:
-        Serial.println("Motors enabled");
         digitalWrite(XYE_ENABLE, LOW);
         break;
     case MOT_DISABLED:
-        Serial.println("Motors disabled");
         digitalWrite(XYE_ENABLE, HIGH);
         break;
 
@@ -123,21 +121,6 @@ void setMotorsEn(MotorsEnableState desiredState)
         break;
     }
 }
-
-// void safeMove(AccelStepper& stepper, int direction, float target) {
-//   int abs_target = abs(target);
-//   int lower_thresh = steps_safety_offset / 2.0f;
-//   int upper_thresh = yaw_full_range - (steps_safety_offset / 2.0f);
-
-//   int l = max(lower_thresh, abs_target);
-//   int u = min(upper_thresh, l);
-
-//   return u;
-
-//   int min = max(abs_target)
-//   if (abs_target > (steps_safety_offset / 2.0f) && abs_target < (yaw_full_range - (steps_safety_offset / 2.0f))) {
-//   }
-// }
 
 void homeMotor(AccelStepper& stepper, int limitSwitchPin, const char* motorName, int direction, float axis_max_steps) {
     stepper.setMaxSpeed(M_SPEED);
@@ -193,11 +176,8 @@ void moveToPosition(float yawAngle, float pitchAngle) {
 
     // Convert angles to steps using bipolar range
     // Map from -180 to +180 degrees to -yaw_abs_max/2 to +yaw_abs_max/2
-    float yawSteps = degreesToSteps(yawAngle, yaw_abs_max);
-    Serial.print("yawSteps : "); Serial.println(yawSteps);
-    // float pitchSteps = degreesToSteps(pitchAngle, pitch_abs_max) - 7819;
-    float pitchSteps = degreesToSteps(pitchAngle, pitch_abs_max);
-    Serial.print("pitchSteps : "); Serial.println(pitchSteps);
+    float yawSteps = degreesToSteps(yawAngle, yaw_abs_max) + degreesToSteps(15.0, yaw_abs_max);
+    float pitchSteps = degreesToSteps(pitchAngle, pitch_abs_max) + degreesToSteps(-8.5, pitch_abs_max);
     
     // Apply safety limits for each axis
     float safeYawSteps = getSafePosition(yawSteps, yaw_safe_min, yaw_safe_max);
@@ -211,18 +191,14 @@ void moveToPosition(float yawAngle, float pitchAngle) {
 void setup()
 {
 
-    Serial.print("yaw_abs_max : "); Serial.println(yaw_abs_max);
-
-
-    // Initialize LED first for status indication
     pinMode(_LED_BUILTIN_, OUTPUT);
     
     // Blink LED during setup to indicate initialization
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 30; i++) {
         digitalWrite(_LED_BUILTIN_, HIGH);
-        delay(100);
+        delay(50);
         digitalWrite(_LED_BUILTIN_, LOW);
-        delay(100);
+        delay(50);
     }
     
     Serial.begin(9600);
@@ -244,8 +220,7 @@ void setup()
 
     Serial.println("All motors homed, entering operation status");
 
-    // moveToPosition(0.0, 0.0);q
-    moveToPosition(180.0, 180.0);
+    moveToPosition(0.0, 0.0);
 
 }
 
@@ -298,7 +273,6 @@ void checkSerial() // method for receiving the commands
                 }
                 else {
                     Serial.print("Received odd command: ");
-                    Serial.println(serialBuffer);
                 }
                 serialBuffer = ""; // Clear buffer for next command
             }
@@ -322,7 +296,7 @@ void loop()
     YAW_STEPPER.run();
     PITCH_STEPPER.run();
 
-    // Non-blocking LED blink at 2Hz (toggle every 250ms)
+    // Non-blocking LED blink
     if (millis() - lastLedToggle >= 500) {
         lastLedToggle = millis();
         ledState = !ledState;
@@ -339,13 +313,5 @@ void loop()
             uint8_t checkmark[] = {0xE2, 0x9C, 0x93}; // UTF-8 encoding for ✓
             Serial.write(checkmark, sizeof(checkmark));
         }
-        //Stress test
-        // if (currentPos == 0) {
-        //     moveToPosition(180.0, 180.0);
-        //     currentPos = 1;
-        // } else {
-        //     moveToPosition(90.0, 90.0);
-        //     currentPos = 0;
-        // }
     }
 }
