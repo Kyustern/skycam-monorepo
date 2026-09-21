@@ -12,6 +12,7 @@ import sys
 from services.aircraft_service import aircraft_service
 from services.kalman_filter_service import kalman_filter_service
 from services.data_capture_service import data_capture_service
+from utils.config import config
 from utils.logger import serial_logger, websocket_logger, server_logger
 
 app = Flask(__name__, static_folder='static')
@@ -243,6 +244,13 @@ def handle_disconnect():
 
 
 @socketio.on('moveto')
+def handle_moveto(data):
+    global server_start
+    server_logger.debug(f"Received a moveto command at {time.time() - server_start}")
+    moveto_cmd = f"moveto {float(data['azimuth']):.2f} {float(data['elevation']):.2f}"
+    success = send_serial_command(moveto_cmd)
+
+@socketio.on('aaaa')
 def handle_moveto(data):
     global server_start
     server_logger.debug(f"Received a moveto command at {time.time() - server_start}")
@@ -594,7 +602,8 @@ if __name__ == '__main__':
             server_logger.info("Skipping Kalman filter service start (Flask reloader process)")
             server_logger.info("Skipping data capture service start (Flask reloader process)")
         
-        socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+        flask_port = int(config.get("flaskPort", 5000))
+        socketio.run(app, host='0.0.0.0', port=flask_port, debug=True)
     finally:
         # Ensure cleanup on any exit
         cleanup_serial()

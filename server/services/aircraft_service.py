@@ -3,13 +3,13 @@ Aircraft Data Service
 Handles fetching aircraft data from OpenSky Network API.
 Secrets are loaded from the project root secrets.json file.
 """
-import json
 import math
 import os
 import time
 from typing import Optional, Dict, Any, List
 import requests
 
+from utils.config import config
 from utils.logger import aircraft_logger
 
 def log_current_path():
@@ -31,7 +31,7 @@ class AircraftService:
     
     def __init__(self):
         """Initialize the service by loading secrets from file."""
-        self._secrets = self._load_secrets()
+        self._secrets = config
         aircraft_logger.debug(f"Loaded secrets: {self._secrets}")
         self._token_cache: Dict[str, Any] = {}
         self._token_expiry_seconds = 30 * 60  # 30 minutes
@@ -55,25 +55,6 @@ class AircraftService:
             "longitude": center_lon,
             "radius_km": search_radius,
         }
-    
-    def _load_secrets(self) -> Dict[str, Any]:
-        """Load secrets from secrets.json file."""
-        # log_current_path()
-        
-        secrets_path = os.path.join("./secrets.json")
-        
-        if not os.path.exists(secrets_path):
-            # Try alternative path
-            secrets_path = os.path.join(os.path.dirname(__file__), "..", "secrets.json")
-        
-        if not os.path.exists(secrets_path):
-            raise FileNotFoundError(
-                f"secrets.json not found at {secrets_path}. "
-                "Please ensure secrets.json exists at the project root."
-            )
-        
-        with open(secrets_path, 'r') as f:
-            return json.load(f)
     
     def _get_client_credentials(self) -> tuple:
         """Get OpenSky client credentials from secrets."""

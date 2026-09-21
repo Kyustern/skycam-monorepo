@@ -12,6 +12,7 @@ from .logger import (
     default_logger,
     get_logger,
 )
+from .config import config, load_config
 
 __all__ = [
     "ServiceLogger",
@@ -23,4 +24,6 @@ __all__ = [
     "server_logger",
     "default_logger",
     "get_logger",
+    "config",
+    "load_config",
 ]

@@ -755,7 +755,7 @@ class KalmanFilterService:
                 self._prediction_times.append(loop_duration)
                     
                 # Log every prediction cycle
-                kalman_logger.info(f"Generated {len(predictions)} predictions at {start_time:.2f}")
+                # kalman_logger.info(f"Generated {len(predictions)} predictions at {start_time:.2f}")
                     
             except Exception as e:
                 kalman_logger.error(f"Error in prediction loop: {e}")
