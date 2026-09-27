@@ -1,9 +1,15 @@
-import serial
-import serial.tools.list_ports
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_socketio import emit
 from socketio_instance import init_socketio, get_socketio
+from serial_instance import (
+    init_serial,
+    get_serial,
+    is_connected,
+    list_serial_ports,
+    send_command as send_serial_command,
+    cleanup_serial,
+)
 import os
 import threading
 import time
@@ -14,6 +20,7 @@ from services.kalman_filter_service import kalman_filter_service
 from services.data_capture_service import data_capture_service
 from utils.config import config
 from utils.logger import serial_logger, websocket_logger, server_logger
+from services.optical_detections_preprocessor import get_optical_preproc, Detections, Detection
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
@@ -21,11 +28,7 @@ CORS(app)
 # Initialize SocketIO
 init_socketio(app, cors_allowed_origins="*", async_mode='threading', path="/api/ws")
 socketio = get_socketio()
-
-# Global serial connection
-serial_connection = None
-reader_thread = None
-shutdown_flag = threading.Event()
+optical_preproc = get_optical_preproc()
 
 # WebSocket heartbeat
 heartbeat_thread = None
@@ -35,137 +38,6 @@ heartbeat_lock = threading.Lock()
 
 # Heartbeat interval (500ms)
 HEARTBEAT_INTERVAL = 5.0
-def list_serial_ports():
-    """Return a list of available serial ports."""
-    try:
-        ports = serial.tools.list_ports.comports()
-        return [port.device for port in ports]
-    except Exception as e:
-        serial_logger.error(f"Error listing serial ports: {e}")
-        return []
-
-def init_serial():
-    """Initialize serial connection to /dev/ttyUSB0."""
-    global serial_connection, reader_thread
-    
-    serial_port = os.environ.get('SERIAL_PORT', '/dev/ttyUSB0')
-    serial_rate = os.environ.get('SERIAL_RATE', '9600')
-    
-    # Close existing connection if open
-    if serial_connection and serial_connection.is_open:
-        try:
-            serial_connection.close()
-            serial_logger.info("Closed existing serial connection")
-        except Exception as e:
-            serial_logger.error(f"Error closing existing serial port: {e}")
-        serial_connection = None
-    
-    # Clear shutdown flag for new connection
-    shutdown_flag.clear()
-    
-    try:
-        serial_connection = serial.Serial(
-            port=serial_port,
-            baudrate=serial_rate,
-            timeout=1
-        )
-        serial_logger.info(f"Connected to {serial_port} at {serial_rate} baud")
-        
-        reader_thread = threading.Thread(target=read_serial, daemon=True)  # Make daemon
-        reader_thread.start()
-        return True
-    except Exception as e:
-        serial_logger.error(f"Error connecting to {serial_port}: {e}")
-        serial_connection = None
-        return False
-
-def read_serial():
-    """Background thread to read from serial port and log messages."""
-    global serial_connection
-    
-    if serial_connection is None:
-        return
-    
-    serial_logger.info("Starting serial reader thread...")
-    
-    while serial_connection and serial_connection.is_open and not shutdown_flag.is_set():
-        try:
-            if serial_connection.in_waiting > 0:
-                line = serial_connection.readline().decode('utf-8', errors='ignore').strip()
-                if line:
-                    serial_logger.info(line)
-            time.sleep(0.01)  # Small delay to prevent CPU overload
-        except serial.SerialException as e:
-            serial_logger.error(f"Connection error: {e}")
-            try:
-                serial_connection.close()
-            except:
-                pass
-            serial_connection = None
-            serial_logger.warning("Serial connection lost. A new command will trigger reconnection.")
-            break
-        except Exception as e:
-            serial_logger.error(f"Unexpected error: {e}")
-            break
-
-
-def send_serial_command(command_str):
-    """Send a command string to the serial port."""
-    global serial_connection
-    serial_logger.debug(f"Sending command, connection: {serial_connection}")
-    
-    # Attempt to reconnect if connection is down
-    if serial_connection is None or not serial_connection.is_open:
-        serial_logger.info("No active serial connection, attempting to reconnect...")
-        init_serial()
-        time.sleep(0.1)  # Small delay to allow connection to establish
-    
-    if serial_connection and serial_connection.is_open:
-        try:
-            serial_logger.debug(f"Command to send: {command_str}")
-            serial_connection.write(command_str.encode('utf-8') + b'\n')
-            serial_logger.info(f"Sent: {command_str}")
-            return True
-        except Exception as e:
-            serial_logger.error(f"Error sending command: {e}")
-            # Mark connection as bad so next attempt will reconnect
-            try:
-                serial_connection.close()
-            except:
-                pass
-            serial_connection = None
-            return False
-    else:
-        serial_logger.error("Serial port not connected after reconnection attempt")
-        return False
-
-
-def cleanup_serial():
-    """Cleanup serial connection and reader thread on shutdown."""
-    global serial_connection, reader_thread
-    serial_logger.info("Cleaning up serial connection...")
-    
-    # Signal the reader thread to stop
-    shutdown_flag.set()
-    
-    # Close the serial connection first
-    if serial_connection and serial_connection.is_open:
-        try:
-            serial_connection.close()
-            serial_logger.info("Serial port closed")
-        except Exception as e:
-            serial_logger.error(f"Error closing serial port: {e}")
-        finally:
-            serial_connection = None
-    
-    # Wait for the reader thread to finish (with timeout)
-    # But don't try to join if we're the reader thread ourselves (avoid deadlock)
-    if reader_thread and reader_thread.is_alive() and reader_thread is not threading.current_thread():
-        reader_thread.join(timeout=2.0)
-        if reader_thread.is_alive():
-            serial_logger.warning("Reader thread did not stop gracefully")
-        else:
-            serial_logger.info("Reader thread stopped")
 
 
 def signal_handler(sig, frame):
@@ -250,12 +122,18 @@ def handle_moveto(data):
     moveto_cmd = f"moveto {float(data['azimuth']):.2f} {float(data['elevation']):.2f}"
     success = send_serial_command(moveto_cmd)
 
-@socketio.on('aaaa')
-def handle_moveto(data):
+@socketio.on('detections')
+def handle_detections(data):
     global server_start
-    server_logger.debug(f"Received a moveto command at {time.time() - server_start}")
-    moveto_cmd = f"moveto {float(data['azimuth']):.2f} {float(data['elevation']):.2f}"
-    success = send_serial_command(moveto_cmd)
+    server_logger.debug(f"Received a detections command at {time.time() - server_start}")
+    result = get_optical_preproc().process_detections(data)
+    if (result is not None):
+        [x, y] = result
+        serial_str = f"moveto {float(x):.2f} {float(y):.2f}"
+        send_serial_command(serial_str)
+    
+        
+    # success = send_serial_command(moveto_cmd)
 
 
 # Basic health check endpoint
@@ -306,30 +184,6 @@ def send_command():
             "status": "error",
             "error": "Failed to send command to serial port"
         }), 500
-
-# Endpoint to list available serial ports
-@app.route('/api/serial/ports', methods=['GET'])
-def get_serial_ports():
-    ports = list_serial_ports()
-    return jsonify({
-        "ports": ports,
-        "count": len(ports),
-        "default": os.environ.get('SERIAL_PORT', '/dev/ttyUSB0'),
-        "connected": serial_connection is not None and serial_connection.is_open
-    }), 200
-
-@app.route('/api/serial/connect', methods=['GET'])
-def connect_serial():
-    ports = list_serial_ports()
-    server_logger.debug(f"Available ports: {ports}")
-
-    return jsonify({
-        "ports": ports,
-        "count": len(ports),
-        "default": os.environ.get('SERIAL_PORT', '/dev/ttyUSB0'),
-        "connected": serial_connection is not None and serial_connection.is_open
-    }), 200
-
 
 @app.route('/api/aircraft/position', methods=['POST'])
 def get_aircraft_by_position():
